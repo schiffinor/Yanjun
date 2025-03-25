@@ -23,6 +23,8 @@ import os
 import random
 import uuid
 import warnings as wn
+import pickle
+import json
 from datetime import datetime as dt
 from datetime import date as dtd
 from datetime import time as dtt
@@ -224,6 +226,13 @@ class UserData:
         # Initialize collection timestamps for each attribute (none collected yet)
         self.dataCollectionDate: Dict[str, Optional[dt.date]] = {key: None for key in self.baseVars}
         self.dataCollectionTime: Dict[str, Optional[dt.time]] = {key: None for key in self.baseVars}
+        self.JSONData = None
+
+    def setJSONData(self, data: Dict[str, Any]):
+        self.JSONData = data
+
+    def getJSONData(self) -> Dict[str, Any]:
+        return self.JSONData
 
     def setUName(self, name: str):
         """
@@ -555,7 +564,7 @@ class UserData:
         return dict(
             zip(self.baseVars, [(self.dataCollectionDate[var], self.dataCollectionTime[var]) for var in self.baseVars]))
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "UserData":
         """
         Create a shallow copy of the UserData instance.
 
@@ -565,7 +574,7 @@ class UserData:
         newUserData.__dict__.update(self.__dict__)
         return newUserData
 
-    def __deepcopy__(self) -> Self:
+    def __deepcopy__(self) -> "UserData":
         """
         Create a deep copy of the UserData instance.
 
@@ -578,6 +587,43 @@ class UserData:
             else:
                 setattr(newUserData, key, value.__deepcopy__())
         return newUserData
+
+    def __eq__(self, other: "UserData") -> bool:
+        """
+        Check if two UserData instances are equal.
+
+        :param other: Another UserData instance.
+        :return: True if the instances are equal, False otherwise.
+        """
+        return all(getattr(self, var) == getattr(other, var) for var in self.baseVars)
+
+    def __ne__(self, other: "UserData") -> bool:
+        """
+        Check if two UserData instances are not equal.
+
+        :param other: Another UserData instance.
+        :return: True if the instances are not equal, False otherwise.
+        """
+        return not self.__eq__(other)
+
+    def deepEq(self, other: "UserData") -> bool:
+        """
+        Check if two UserData instances are equal, including data collection timestamps.
+
+        :param other: Another UserData instance.
+        :return: True if the instances are equal, False otherwise.
+        """
+        return all(getattr(self, var) == getattr(other, var) for var in self.baseVars) and \
+               all(self.getCollectionDateTime(var) == other.getCollectionDateTime(var) for var in self.baseVars)
+
+    def deepNotEq(self, other: "UserData") -> bool:
+        """
+        Check if two UserData instances are not equal, including data collection timestamps.
+
+        :param other: Another UserData instance.
+        :return: True if the instances are not equal, False otherwise.
+        """
+        return not self.deepEq(other)
 
 
 class Data:
@@ -788,7 +834,7 @@ class Data:
             return dict(zip(fullBaseVars, tupleAll))
         return tupleAll
 
-    def getCollectionDate(self, var: str) -> dt:
+    def getCollectionDate(self, var: str) -> Optional[dtd]:
         """
         Get the collection date for a specified attribute.
 
@@ -797,7 +843,7 @@ class Data:
         """
         return self.dataCollectionDate[var]
 
-    def getCollectionTime(self, var: str) -> dt:
+    def getCollectionTime(self, var: str) -> Optional[dtt]:
         """
         Get the collection time for a specified attribute.
 
@@ -806,7 +852,7 @@ class Data:
         """
         return self.dataCollectionTime[var]
 
-    def getCollectionDateTime(self, var: str) -> Tuple[dt, dt]:
+    def getCollectionDateTime(self, var: str) -> Tuple[Optional[dtd], Optional[dtt]]:
         """
         Get both the collection date and time for a specified attribute.
 
@@ -815,7 +861,7 @@ class Data:
         """
         return self.dataCollectionDate[var], self.dataCollectionTime[var]
 
-    def getCollectionDateTimeAll(self) -> Dict[str, Tuple[dt, dt]]:
+    def getCollectionDateTimeAll(self) -> Dict[str, Tuple[Optional[dtd], Optional[dtt]]]:
         """
         Get the collection date and time for all attributes.
 
@@ -823,7 +869,7 @@ class Data:
         """
         return dict(zip(self.baseVars, [(self.dataCollectionDate[var], self.dataCollectionTime[var]) for var in self.baseVars]))
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "Data":
         """
         Create a shallow copy of the Data instance.
 
@@ -833,7 +879,7 @@ class Data:
         newData.__dict__.update(self.__dict__)
         return newData
 
-    def __deepcopy__(self) -> Self:
+    def __deepcopy__(self) -> "Data":
         """
         Create a deep copy of the Data instance.
 
@@ -849,6 +895,42 @@ class Data:
                 setattr(newData, key, value.__copy__())
         return newData
 
+    def __eq__(self, other: "Data") -> bool:
+        """
+        Check if two Data instances are equal.
+
+        :param other: The other Data instance to compare.
+        :return: True if the two instances are equal, False otherwise.
+        """
+        return self.cText == other.cText and self.cUserLink == other.cUserLink and self.cLikes == other.cLikes and self.userData == other.userData
+
+    def deepEq(self, other: "Data") -> bool:
+        """
+        Check if two Data instances are equal, including dateTime.
+
+        :param other: The other Data instance to compare.
+        :return: True if the two instances are equal, False otherwise.
+        """
+        return self.cText == other.cText and self.cUserLink == other.cUserLink and self.cLikes == other.cLikes and self.userData.deepEq(other.userData) and self.dataCollectionDate == other.dataCollectionDate and self.dataCollectionTime == other.dataCollectionTime
+
+    def __ne__(self, other: "Data") -> bool:
+        """
+        Check if two Data instances are not equal.
+
+        :param other: The other Data instance to compare.
+        :return: True if the two instances are not equal, False otherwise.
+        """
+        return not self.__eq__(other)
+
+    def deepNotEq(self, other: "Data") -> bool:
+        """
+        Check if two Data instances are not equal, including dateTime.
+
+        :param other: The other Data instance to compare.
+        :return: True if the two instances are not equal, False otherwise.
+        """
+        return not self.deepEq(other)
+
 
 class Node:
     """
@@ -863,7 +945,7 @@ class Node:
 
     def __init__(self,
                  value: Data = None,
-                 parent: Self = None,
+                 parent: "Node" = None,
                  uniqueID: uuid.UUID = None,
                  indexFromParent: int = None):
         """
@@ -878,9 +960,9 @@ class Node:
         :param uniqueID: An optional UUID. If not provided, a new UUID is generated.
         :param indexFromParent: An optional integer indicating this node's index among its siblings.
         """
-        self.parent: Self = parent
+        self.parent: "Node" = parent
         self.data = Data() if value is None else value
-        self.children: List[Self] = []  # List to hold child nodes (because one can never have too many children)
+        self.children: List["Node"] = []  # List to hold child nodes (because one can never have too many children)
         # Assign a unique identifier; if provided, use it, otherwise generate a new one.
         self.unique = uniqueID if uniqueID is not None else uuid.uuid4()
         self.uniqueStr = self.unique.hex # Convenient hex string representation for display and easy dict search
@@ -952,7 +1034,7 @@ class Node:
         """
         self.indexFromParent = index
 
-    def add_child(self, child: Self):
+    def add_child(self, child: "Node"):
         """
         Add a child node to this node.
 
@@ -965,7 +1047,7 @@ class Node:
         # Set the child's index from the parent based on its position in the list.
         child.setIndexFromParent(self.children.index(child))
 
-    def remove_child(self, child: Self):
+    def remove_child(self, child: "Node"):
         """
         Remove a child node from this node.
 
@@ -977,7 +1059,7 @@ class Node:
         child.parent = None
         # The child is now an orphan—sad but sometimes necessary.
 
-    def replace_child(self, oldChild: Self, newChild: Self):
+    def replace_child(self, oldChild: "Node", newChild: "Node"):
         """
         Replace an existing child node with a new node.
 
@@ -990,7 +1072,7 @@ class Node:
         newChild.parent = self
         newChild.setIndexFromParent(self.children.index(newChild))
 
-    def add_children(self, children: List[Self]):
+    def add_children(self, children: List["Node"]):
         """
         Add multiple children to this node.
 
@@ -999,7 +1081,7 @@ class Node:
         for child in children:
             self.add_child(child)
 
-    def remove_children(self, children: Optional[List[Self]] = None):
+    def remove_children(self, children: Optional[List["Node"]] = None):
         """
         Remove specified children from this node. If no list is provided, remove all children.
 
@@ -1012,7 +1094,7 @@ class Node:
             child.setIndexFromParent(-1)
             # Setting index to -1 to indicate removal from parent's ordering.
 
-    def get_children(self) -> List[Self]:
+    def get_children(self) -> List["Node"]:
         """
         Return the list of child nodes.
 
@@ -1020,7 +1102,7 @@ class Node:
         """
         return self.children
 
-    def get_parent(self) -> Self:
+    def get_parent(self) -> "Node":
         """
         Return the parent of this node.
 
@@ -1044,7 +1126,7 @@ class Node:
         """
         self.data = data
 
-    def set_parent(self, parent: Self):
+    def set_parent(self, parent: "Node"):
         """
         Set the parent node of this node.
 
@@ -1076,7 +1158,7 @@ class Node:
         """
         return not self.is_leaf() and not self.is_root()
 
-    def get_depth(self: Self) -> int:
+    def get_depth(self: "Node") -> int:
         """
         Calculate the depth of this node in the tree.
 
@@ -1091,7 +1173,7 @@ class Node:
             node = node.parent
         return depth
 
-    def get_path(self: Self) -> List[int]:
+    def get_path(self: "Node") -> List[int]:
         """
         Retrieve the path from the root to this node as a list of indices.
 
@@ -1123,7 +1205,7 @@ class Node:
         # Recursively call localTree on each child.
         return [self, [c.localTree() for c in ch]]
 
-    def flatten(self: Self) -> List[Self]:
+    def flatten(self: "Node") -> List["Node"]:
         """
         Flatten the subtree rooted at this node into a single list.
 
@@ -1163,8 +1245,8 @@ class Node:
                    variables: Union[DTyp, List[DTyp], List[List[DTyp]]] = None,
                    data: Union[Any, List[Any], List[List[Any]]] = None,
                    indexLists: List[int] | List[List[int]] = None,
-                   operatorCode: Union[str, Op.RelOperator, Callable[[Any, Any], bool]] = "==") -> list | List[Self] | \
-                                                                                                   List[List[Self]]:
+                   operatorCode: Union[str, Op.RelOperator, Callable[[Any, Any], bool]] = "==") -> list | List["Node"] | \
+                                                                                                   List[List["Node"]]:
         """
         Search for nodes in the subtree that match the specified criteria.
 
@@ -1198,7 +1280,7 @@ class Node:
             count = self.size()
 
         # Define a simple recursive function to gather nodes (if no search criteria is provided)
-        def recursiveAll(node: Self, currList: List[Self]) -> List[Self]:
+        def recursiveAll(node: "Node", currList: List["Node"]) -> List["Node"]:
             if len(currList) == count:
                 return currList
             currList.append(node)
@@ -1385,21 +1467,21 @@ class Node:
         # --- End final check for variables and data matching ---
 
         # Define a recursive helper for variable-based search (logic unchanged)
-        def _recursiveVarSearch(node: Self,
+        def _recursiveVarSearch(node: "Node",
                                 rVars: List[List[DTyp]],
                                 rData: List[List[DTyp2]],
                                 rCount: int,
-                                currList: List[List[Self]],
+                                currList: List[List["Node"]],
                                 iterated: bool = False,
-                                opF: Callable[[Any, Any], bool] = opp.eq) -> List[List[Self]]:
+                                opF: Callable[[Any, Any], bool] = opp.eq) -> List[List["Node"]]:
             if rCount == 0:
                 return currList
 
             # Inner function to check if node data matches expected criteria.
-            def _dataSearch(node2: Self,
+            def _dataSearch(node2: "Node",
                             vars2: List[List[DTyp]],
                             data2: List[List[DTyp2]],
-                            innerCurrList: List[List[Self]],
+                            innerCurrList: List[List["Node"]],
                             iterated2: bool = False,
                             added: bool = False,
                             opFF: Callable[[Any, Any], bool] = opp.eq) -> Tuple[List[List[DTyp2]], bool, bool]:
@@ -1505,18 +1587,18 @@ class Node:
             cmp2 = cmp
         cmp: Callable[[Any, Any], int] = _pyCmpFromCmp(cmp2)
         for node in self:
-            node: Self
+            node: "Node"
             if node.is_leaf():
                 continue
             # Sort each node's children using the provided key and comparator.
             node.children = sorted(node.children, key=cmp_to_key(lambda a, b: cmp(key(a), key(b))), reverse=reverse)
         for node in self:
-            node: Self
+            node: "Node"
             # Update the index of each child node based on its position in the list.
             for i, child in enumerate(node.children):
                 child.setIndexFromParent(i)
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "Node":
         """
         Create a shallow copy of the Node.
 
@@ -1524,7 +1606,7 @@ class Node:
         """
         return Node(self.data, self.parent, self.unique, self.indexFromParent)
 
-    def __deepcopy__(self) -> Self:
+    def __deepcopy__(self) -> "Node":
         """
         Create a deep copy of the Node.
 
@@ -1535,6 +1617,66 @@ class Node:
         # Deep copy the children and add them to the new node.
         new_node.children = [child.__deepcopy__() for child in self.children]
         return new_node
+
+    def __eq__(self, other: "Node") -> bool:
+        """
+        Check if two nodes are equal.
+        Checks if the data,and index from parent are equal. For root and all children recursively.
+
+        :param other: The other Node to compare.
+        :return: True if the nodes are equal, False otherwise.
+        """
+        if not isinstance(other, Node):
+            return False
+        if self.data != other.data:
+            return False
+        if self.indexFromParent != other.indexFromParent:
+            return False
+        if len(self.children) != len(other.children):
+            return False
+        for i in range(len(self.children)):
+            if self.children[i] != other.children[i]:
+                return False
+        return True
+
+    def __ne__(self, other: "Node") -> bool:
+        """
+        Check if two nodes are not equal.
+
+        :param other: The other Node to compare.
+        :return: True if the nodes are not equal, False otherwise.
+        """
+        return not self.__eq__(other)
+
+    def deepEqual(self, other: "Node") -> bool:
+        """
+        Check if two nodes are equal, including all descendants.
+        Matches UUIDs and data, and recursively checks children and collection dates.
+
+        :param other: The other Node to compare.
+        :return: True if the nodes are equal, False otherwise.
+        """
+        if not isinstance(other, Node):
+            return False
+        if self.data != other.data:
+            return False
+        if self.getUniqueID() != other.getUniqueID():
+            return False
+        if len(self.children) != len(other.children):
+            return False
+        for i in range(len(self.children)):
+            if not self.children[i].deepEqual(other.children[i]):
+                return False
+        return True
+
+    def deepNotEqual(self, other: "Node") -> bool:
+        """
+        Check if two nodes are not equal, including all descendants.
+
+        :param other: The other Node to compare.
+        :return: True if the nodes are not equal, False otherwise.
+        """
+        return not self.deepEqual(other)
 
 
 class CommentTree:
@@ -1555,7 +1697,6 @@ class CommentTree:
         """
         self.root = Node() # Create the dummy root node.
         self.root.setIndexFromParent(0) # Set root's index (arbitrarily 0, since it's the top).
-        self.currIndex = 1  # Counter for future indexing (not actively used in this version).
         # Dictionaries for fast lookup by UUID and its hex string representation.
         self.uuidDict: Dict[uuid.UUID, Node] = {self.root.getUniqueID(): self.root}
         self.uuidStrDict: Dict[str, Node] = {self.root.getUniqueStr(): self.root}
@@ -1629,7 +1770,7 @@ class CommentTree:
         """
         return self.root.__iter__()
 
-    def __copy__(self) -> Self:
+    def __copy__(self) -> "CommentTree":
         """
         Create a shallow copy of the CommentTree.
 
@@ -1981,7 +2122,7 @@ class CommentTree:
             raise TypeError("Key must be an integer, string, or UUID.")
 
     @staticmethod
-    def print_level_order_tree(rt: Node, printVar: DTyp = DTyp.cText, printVar2: Optional[DTyp] = None):
+    def print_level_order_tree(rt: Node, printVar: DTyp = DTyp.cText, printVar2: Optional[DTyp] = None, debug: bool = False):
         """
         Print the tree in level order (breadth-first traversal).
 
@@ -1992,6 +2133,7 @@ class CommentTree:
         :param rt: The root Node of the tree to print.
         :param printVar: The primary DTyp variable to display for each node (default: cText).
         :param printVar2: An optional secondary DTyp variable to display.
+        :param debug: If True, print additional debug information.
         :return: None.
         """
         if rt is None:
@@ -2024,7 +2166,9 @@ class CommentTree:
 
                 # Determine parent's display text (root is displayed as 'root').
                 parent_text = "root" if (parent is None or parent is rt) else parent.get_data().getCText()
-                node_repr = f"{node.data.deepGetAll(dictify=True)[str(printVar.value)]} (child of {parent_text})" + (f" (data = {node.data.deepGetAll(dictify=True)[str(printVar2.value)]})" if printVar2 is not None else "")
+                extra_ = f" (data = {node.data.deepGetAll(dictify=True)[str(printVar2.value)]})" if printVar2 is not None else ""
+                debug_text = f" (parent = {parent_text}; index = {node.indexFromParent}; uuid = {node.getUniqueID()})" if debug else ""
+                node_repr = f"{node.data.deepGetAll(dictify=True)[str(printVar.value)]} (child of {parent_text})" + extra_ + debug_text
 
                 # Group nodes that share the same parent.
                 if current_parent is None:
@@ -2059,6 +2203,35 @@ class CommentTree:
         :return: None.
         """
         self.print_level_order_tree(self.root, printVar, printVar2)
+
+    def __eq__(self, other: "CommentTree") -> bool:
+        """
+        Check if two CommentTrees are equal.
+
+        Two CommentTrees are considered equal if they are structurally identical.
+
+        :param other: The other CommentTree to compare.
+        :return: True if the trees are equal, False otherwise.
+        """
+        return self.root == other.root
+
+    def __ne__(self, other: "CommentTree") -> bool:
+        """
+        Check if two CommentTrees are not equal.
+
+        :param other: The other CommentTree to compare.
+        :return: True if the trees are not equal, False otherwise.
+        """
+        return not self.__eq__(other)
+
+    def deepEQ(self, other: "CommentTree") -> bool:
+        """
+        Check if two CommentTrees are equal, including all descendants.
+
+        :param other: The other CommentTree to compare.
+        :return: True if the trees are equal, False otherwise.
+        """
+        return self.root.deepEqual(other.root)
 
     def toCSV(self, path: str = None) -> None:
         """
@@ -2170,12 +2343,14 @@ class CommentTree:
         root.setUniqueID(uuid.UUID(hex=str(rootRow[0])))
         newTree.set_root(root)
         nodes[root.getUniqueID()] = root
+        newTree.root.setIndexFromParent(0)
         # Iterate through the data and add the nodes to the tree
         for row in data[2:]:
             # Create a new node
             node = Node(Data())
             nodeID = uuid.UUID(hex=str(row[0]))
             parentID = uuid.UUID(hex=str(row[1]))
+            node.setUniqueID(nodeID)
             index = int(row[2])
             # Set the data of the node
             nodeData = {
@@ -2206,6 +2381,52 @@ class CommentTree:
 
         # Return the new CommentTree
         return newTree
+
+    def toPickle(self, path: str = None) -> None:
+        """
+        This function will save the CommentTree to a pickle file.
+        :return:
+        """
+        # Save the CommentTree to a pickle file
+        if path is None:
+            path = f"commentTreePickle\\{(str(dt.now()).replace(" ", "_").replace(":", "-").replace(".", "_"))}\\{self.uuidStr}\\commentTree.pickle"
+        # Create the directory if it does not exist
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def fromPickle(path: str) -> "CommentTree":
+        """
+        This function will load a CommentTree from a pickle file.
+        :param path: The path to load the CommentTree from.
+        :return: The CommentTree loaded from the pickle file.
+        """
+        # Load the CommentTree from the pickle file
+        with open(path, "rb") as f:
+            return pickle.load(f)
+
+    def getUniqueUsers(self) -> Dict[str, List[str]]:
+        """
+        Get all unique users in the CommentTree.
+        :return: A dict of all unique users in the CommentTree.
+        """
+        # Create a dictionary to store the unique users
+        uniqueUsers = {}
+        # Iterate through all the nodes in the CommentTree
+        for node in self:
+            # Get the user data of the node
+            userLink = node.get_data().cUserLink
+            nodeUUID = node.getUniqueStr()
+            # If the user is not in the dictionary, add it
+            if userLink not in uniqueUsers:
+                uniqueUsers[userLink] = [nodeUUID]
+            # Otherwise, append the node to the list of nodes for that user
+            else:
+                uniqueUsers[userLink].append(nodeUUID)
+        return uniqueUsers
+
+
 
 
 
@@ -2751,5 +2972,75 @@ if __name__ == "__main__":
     print(f"Most recent CSV file: {mostRecentCSV}")
     newTree = CommentTree.fromCSV(mostRecentCSV)
     newTree.print_lot(printVar=DTyp.cText, printVar2=DTyp.cLikes)
+
+
+    # Check if  equal when from CSV
+    print("Check if  equal when from CSV")
+    try:
+        assert ct == newTree
+        print("Trees are the same")
+    except AssertionError:
+        print("Trees are not the same")
+        print("old Tree:")
+        ct.print_level_order_tree(ct.get_root(), printVar=DTyp.cText, printVar2=DTyp.cLikes, debug=True)
+        print("new Tree:")
+        newTree.print_level_order_tree(newTree.get_root(), printVar=DTyp.cText, printVar2=DTyp.cLikes, debug=True)
+
+
+
+    # Check if they are deep equal
+    try:
+        assert ct.deepEQ(newTree)
+        print("Trees are deep equal")
+    except AssertionError:
+        print("Trees are not deep equal")
+        print("old Tree:")
+        ct.print_level_order_tree(ct.get_root(), printVar=DTyp.cText, printVar2=DTyp.cLikes, debug=True)
+        print("new Tree:")
+        newTree.print_level_order_tree(newTree.get_root(), printVar=DTyp.cText, printVar2=DTyp.cLikes, debug=True)
+
     print("\n=== Testing Complete ===")
+
+    # Test toPickle method
+    print("\n=== toPickle Test ===")
+    ct.toPickle()
+    print("\n=== Testing Complete ===")
+
+    # Test fromPickle method
+    print("\n=== fromPickle Test ===")
+    # find most recent pickle file
+    # we know they are stored in a sub directory of there uuidStr
+    # then in a subdirectory of their creation date time
+    # so we can just find the most recent sub directory
+    # and then find the most recent pickle file in that sub directory
+    pickleDir = "commentTreePickle"
+    subDirs = [os.path.join(pickleDir, o) for o in os.listdir(pickleDir) if os.path.isdir(os.path.join(pickleDir, o))]
+    mostRecentSubDir = max(subDirs, key=os.path.getmtime)
+    print(f"Most recent sub directory: {mostRecentSubDir}")
+    subSubDirs = [os.path.join(mostRecentSubDir, o) for o in os.listdir(mostRecentSubDir) if os.path.isdir(os.path.join(mostRecentSubDir, o))]
+    mostRecentSubSubDir = max(subSubDirs, key=os.path.getmtime)
+    print(f"Most recent sub sub directory: {mostRecentSubSubDir}")
+    pickleFiles = [os.path.join(mostRecentSubSubDir, o) for o in os.listdir(mostRecentSubSubDir) if o.endswith(".pickle")]
+    mostRecentPickle = max(pickleFiles, key=os.path.getmtime)
+    print(f"Most recent pickle file: {mostRecentPickle}")
+    newTree = CommentTree.fromPickle(mostRecentPickle)
+    print("old Tree:")
+    ct.print_lot(printVar=DTyp.cText, printVar2=DTyp.cLikes)
+    print("new Tree:")
+    newTree.print_lot(printVar=DTyp.cText, printVar2=DTyp.cLikes)
+    # check if the tree is the same as the original tree
+    try:
+        assert ct == newTree
+        print("Trees are the same")
+    except AssertionError:
+        print("Trees are not the same")
+    # check if they are deep equal
+    try:
+        assert ct.deepEQ(newTree)
+        print("Trees are deep equal")
+    except AssertionError:
+        print("Trees are not deep equal")
+
+
+
 

@@ -1,0 +1,78 @@
+{
+  "Database": {
+    "Videos": {
+      "0": {
+        "videoFiles": {
+          "file": {
+            "path": "~~~"
+          },
+          "transcripts": {
+            "srt": {
+              "path": "~~~"
+            },
+            "vtt": {
+              "path": "~~~"
+            },
+            "txt": {
+              "path": "~~~"
+            }
+          }
+        },
+        "metadata": {
+          "author": {
+            "id": "~~~"
+          },
+          "videoMetadata": {
+            "~~~": "~~~"
+          }
+        },
+        "comments": {
+          "0": {
+            "author": {
+              "id": "~~~"
+            },
+            "comment": "~~~",
+            "metadata": {
+              "~~~": "~~~"
+            },
+            "replies": {
+              "0": {
+                "author": {
+                  "id": "~~~"
+                },
+                "comment": "~~~",
+                "metadata": {
+                  "~~~": "~~~"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Users": {
+        "0": {
+            "metadata": {
+            "~~~": "~~~"
+            },
+            "videos": {
+            "0": {
+                "id": "~~~"
+            }
+            },
+            "comments": {
+              "videos": {
+                "0": {
+                  "video_id": "~~~",
+                  "comments": {
+                    "0": {
+                      "comment_id": "~~~"
+                    }
+                  }
+                }
+              }
+            }
+        }
+    }
+  }
+}
