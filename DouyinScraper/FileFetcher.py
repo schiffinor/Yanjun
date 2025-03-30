@@ -9,10 +9,11 @@ In one pass this script will:
 - Save the video to the specified folder
 - Extract all the comments from the video
 """
+import io
 import json
 import httpx
 import asyncio
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import sys
 import os
 import csv
@@ -25,8 +26,14 @@ from datetime import datetime as dt
 import aiofiles
 import warnings as wn
 import docker
+from docker import errors as de
 import time
 import database
+import re
+import shutil
+import yaml
+import tarfile
+
 
 def basePather(basePath: str = None):
     if basePath is None:
@@ -35,7 +42,46 @@ def basePather(basePath: str = None):
     else:
         return basePath
 
+def get_docker_client():
+    """
+    Get the Docker client.
 
+    :return: Docker client instance.
+    """
+    try:
+        client = docker.from_env()
+        return client
+    except Exception as e:
+        print("Error connecting to Docker:", e)
+        return None
+
+def get_container_by_name(container_name: str):
+    """
+    Get a Docker container by its name.
+
+    :param container_name: Name of the container to find.
+    :return: Docker container instance or None if not found.
+    """
+    client = get_docker_client()
+    if client is None:
+        return None
+    try:
+        container = client.containers.get(container_name)
+        return container
+    except de.NotFound:
+        print(f"Container '{container_name}' not found.")
+        return None
+
+def get_docker_logs(container_name: str, since: int = None) -> str:
+    logs = ""
+    try:
+        container = get_container_by_name(container_name)
+        # Get logs (decode from bytes to string)
+        logs = container.logs(since=since).decode("utf-8")
+        return logs
+    except Exception as e:
+        print("Error checking Docker logs:", e)
+        return logs
 
 def check_docker_logs(container_name: str, since: int = None) -> bool:
     """
@@ -45,20 +91,75 @@ def check_docker_logs(container_name: str, since: int = None) -> bool:
     :param since: Optional Unix timestamp to filter logs.
     :return: True if an error pattern is detected, otherwise False.
     """
-    client = docker.from_env()
     try:
-        container = client.containers.get(container_name)
-        # Get logs (decode from bytes to string)
-        logs = container.logs(since=since).decode("utf-8")
+        # Get Logs
+        logs = get_docker_logs(container_name, since)
         # Define error patterns to check for
         error_patterns = [
             "500: An error occurred while fetching data",
             "peer closed connection",
-            "清理未完成的文件"
+            "清理未完成的文件",
+            "WARNING  第 1 次响应内容为空, 状态码: 200,"
+            "WARNING  第 2 次响应内容为空, 状态码: 200,",
+            "WARNING  第 3 次响应内容为空, 状态码: 200,",
+            "程序出现异常，请检查错误信息。",
+            "ERROR    无效响应类型。响应类型: <class 'NoneType'>"
         ]
         for pattern in error_patterns:
             if pattern in logs:
                 print(f"Detected error pattern in Docker logs: {pattern}")
+                return True
+        return False
+    except Exception as e:
+        print("Error checking Docker logs:", e)
+        return False
+
+def check_docker_logs_for_ttwid_update_error():
+    """
+    Check the Docker logs for errors related to ttwid update.
+
+    :return: True if an error pattern is detected, otherwise False.
+    """
+    try:
+        container_name = "douyin_tiktok_api"  # Update to your container's name
+        logs = get_docker_logs(container_name)
+        error_patterns = [
+            "WARNING  第 1 次响应内容为空, 状态码: 200,"
+            "WARNING  第 2 次响应内容为空, 状态码: 200,",
+            "WARNING  第 3 次响应内容为空, 状态码: 200,",
+            "ERROR    无效响应类型。响应类型: <class 'NoneType'>",
+            "400 Bad Request"
+        ]
+        for pattern in error_patterns:
+            if pattern in logs:
+                print(f"Detected ttwid update error in Docker logs: {pattern}")
+                return True
+        return False
+    except Exception as e:
+        print("Error checking Docker logs:", e)
+        return False
+
+def check_docker_logs_for_ttwid_update_error2():
+    """
+    Check the Docker logs for errors related to ttwid update.
+
+    :return: True if an error pattern is detected, otherwise False.
+    """
+    try:
+        container_name = "douyin_tiktok_api"  # Update to your container's name
+        container = get_container_by_name(container_name)
+        logs = container.logs(tail=25).decode("utf-8")
+        error_patterns = [
+            "WARNING  第 1 次响应内容为空, 状态码: 200,"
+            "WARNING  第 2 次响应内容为空, 状态码: 200,",
+            "WARNING  第 3 次响应内容为空, 状态码: 200,",
+            "ERROR    无效响应类型。响应类型: <class 'NoneType'>",
+            "400 Bad Request"
+
+        ]
+        for pattern in error_patterns:
+            if pattern in logs:
+                print(f"Detected ttwid update error in Docker logs: {pattern}")
                 return True
         return False
     except Exception as e:
@@ -87,6 +188,159 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient, request_url: 
             print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {delay} seconds...")
         await asyncio.sleep(delay)
     raise Exception("Max retries reached. Video not available.")
+
+async def fetch_ttwid():
+    """
+    Fetch the ttwid value from the douyin api.
+    :return:
+    """
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
+        requestURL = "http://localhost/api/douyin/web/generate_ttwid"
+        response = await get_with_retry(client, requestURL, params={})
+        return Fetcher.dataFromResponse(response)["ttwid"]
+
+async def fetch_s_v_web_id():
+    """
+    Fetch the s_v_web_id value from the douyin api.
+    :return:
+    """
+    async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
+        requestURL = "http://localhost/api/douyin/web/generate_s_v_web_id"
+        response = await get_with_retry(client, requestURL, params={})
+        return Fetcher.dataFromResponse(response)["s_v_web_id"]
+
+async def docker_restart(client: httpx.AsyncClient, request_url: str, params: dict,
+                         max_retries: int = 5, delay: int = 5, backoff_factor: float = 2.0, restarts: int = 0, since: int = None) -> None:
+    """
+    Restart the Docker container if an error is detected in the logs.
+
+    :param client: httpx.AsyncClient instance.
+    :param request_url: URL of the API endpoint to check.
+    :param params: Parameters to send with the request.
+    :param max_retries: Maximum number of retries for the request.
+    :param delay: Initial delay between retries.
+    :param backoff_factor: Factor by which to increase the delay after each retry.
+    :param restarts: Number of times the container has been restarted.
+    :param since: Optional Unix timestamp to filter logs.
+    :return:
+    """
+    container_name = "douyin_tiktok_api"  # Update to your container's name
+    sinceTimestamp = since
+    try:
+        dLogs = get_docker_logs(container_name, since=sinceTimestamp)
+        # print last line of logs
+        print(dLogs.splitlines()[-1])
+        if check_docker_logs(container_name, since=sinceTimestamp) or (check_docker_logs_for_ttwid_update_error2()):
+            print("Error detected in Docker logs. \nCheck if error is of type: \nERROR    无效响应类型。响应类型: <class 'NoneType'>")
+            if check_docker_logs_for_ttwid_update_error2():
+                # We need to generate new ttwid, and s_v_web_id, then update container/app/crawlers/douyin/web/config.yaml with new values
+                print("Detected \"ERROR    无效响应类型。响应类型: <class 'NoneType'>\" in Docker logs.")
+                print("Initiating update, and restart of the container.")
+                container = get_container_by_name(container_name)
+                # Get "/app/crawlers/douyin/web/config.yaml" file from the container
+                config_file_path = "/app/crawlers/douyin/web/config.yaml"
+                # get file from docker container as tar archive
+                docker_file_stream, stat = container.get_archive(config_file_path)
+                # Create a dedicated directory to save the file
+                os.makedirs("docker_config_tar", exist_ok=True)
+                # Save the file to the local filesystem
+                with open("docker_config_tar/config.tar", "wb") as f:
+                    for chunk in docker_file_stream:
+                        f.write(chunk)
+                # unpack the tar file
+                shutil.unpack_archive("docker_config_tar/config.tar", "docker_config", "tar")
+                # Now we need to update the config.yaml file with new ttwid, and s_v_web_id
+                with open("docker_config/config.yaml", "r",encoding="utf-8") as f:
+                    print("Reading config.yaml file...")
+                    yamlLoad = yaml.safe_load(f)
+                # Update the config with new ttwid, and s_v_web_id both values are stored on a single line:
+                # "      Cookie: ttwid=1%7CJssbjvuUQM1BPJKFN3PNh5ej0gUiBjrNc83Zw8a2R_c%7C1743198163%7Cced07d156fd017cb6d3c9a28187298548179fcf743301b83dcdc8f2f7187e0cd; UIFID_TEMP=209b86ca33829c7d9c7b7c40c5eb89f829cca190227d7391efa903940cb34a3cb2eaee5fa34ca946d1c974997d1e93692b87442ccb9f686a2e8aca8d4aa4cb501b43b3210207779c39feed0d37c6a1bb; hevc_supported=true; IsDouyinActive=true; home_can_add_dy_2_desktop=%220%22; dy_swidth=4096; dy_sheight=1152; stream_recommend_feed_params=%22%7B%5C%22cookie_enabled%5C%22%3Atrue%2C%5C%22screen_width%5C%22%3A4096%2C%5C%22screen_height%5C%22%3A1152%2C%5C%22browser_online%5C%22%3Atrue%2C%5C%22cpu_core_num%5C%22%3A16%2C%5C%22device_memory%5C%22%3A0%2C%5C%22downlink%5C%22%3A%5C%22%5C%22%2C%5C%22effective_type%5C%22%3A%5C%22%5C%22%2C%5C%22round_trip_time%5C%22%3A0%7D%22; volume_info=%7B%22isUserMute%22%3Atrue%2C%22isMute%22%3Atrue%2C%22volume%22%3A0.5%7D; stream_player_status_params=%22%7B%5C%22is_auto_play%5C%22%3A0%2C%5C%22is_full_screen%5C%22%3A0%2C%5C%22is_full_webscreen%5C%22%3A0%2C%5C%22is_mute%5C%22%3A1%2C%5C%22is_speed%5C%22%3A1%2C%5C%22is_visible%5C%22%3A1%7D%22; xgplayer_user_id=889208878171; fpk1=U2FsdGVkX1+pANPboYSOHYx0HudreojO8elUNxGbPOYJXkqcxSrSF1ld+iNZNPr3WZ9oQm7SEuBwB/uq9WD4SA==; fpk2=b0fc1a0934e7ea864f39ca0a0b863cfa; s_v_web_id=verify_m8tb8e26_xBk6z0gS_FCyn_4JUK_9S4S_sLzVrxgypowe; FORCE_LOGIN=%7B%22videoConsumedRemainSeconds%22%3A180%2C%22isForcePopClose%22%3A1%7D; passport_csrf_token=ac6461520516e67114ba9f2ef8a16060; passport_csrf_token_default=ac6461520516e67114ba9f2ef8a16060; __security_mc_1_s_sdk_crypt_sdk=ef677104-4e9d-aeb5; __security_mc_1_s_sdk_cert_key=aa542711-47ad-bc81; __security_mc_1_s_sdk_sign_data_key_web_protect=345a6279-4b89-814c; bd_ticket_guard_client_web_domain=2; UIFID=209b86ca33829c7d9c7b7c40c5eb89f829cca190227d7391efa903940cb34a3c3123432fde60cbaf0f05fd441cf18cf4d698ce7d3ab61ce5e0baf2c01481b5da70865d7467d7a5b41cb2050f82802767248bdfc243d90cf70c917effa07a322eddf302995a1e82e0c7984beb29c770e554777406bc89b3556a72c512e807f63115f2fb33eb5e2b28eae764f4a5b05f14c4ff4bb869501bc9907daef3bc3f24d8; __security_mc_1_s_sdk_sign_data_key_sso=913ec76f-41f4-8f67; odin_tt=e8e2dc8d10a064126c77fffb728b4dc87a5a11a3d067b4ee82af74f7f4cde41737ac2d07924525ffb03fccd80e618a652379b1daca460a8aaa922cf4386587c5b0f43a660dc223ddaaedea6a34f8526f; is_dash_user=1; SEARCH_RESULT_LIST_TYPE=%22single%22; WallpaperGuide=%7B%22showTime%22%3A1742070635298%2C%22closeTime%22%3A0%2C%22showCount%22%3A3%2C%22cursor1%22%3A47%2C%22cursor2%22%3A14%7D; strategyABtestKey=%221742070308.114%22; device_web_cpu_core=16; architecture=amd64; xg_device_score=7.501291248034187; douyin.com; device_web_memory_size=-1; csrf_session_id=e404af928480f0832e8d7ec8b2e250fa; biz_trace_id=b845cd9c; x-web-secsdk-uid=38327e99-2ba4-45f6-b9cf-6b4268aed836; __ac_nonce=067d5e221003aa2a1ceb1; __ac_signature=_02B4Z6wo00f01uX8RGQAAIDAXFPy7CsVSvrlzEDAAN6475; sdk_source_info=7e276470716a68645a606960273f276364697660272927676c715a6d6069756077273f276364697660272927666d776a68605a607d71606b766c6a6b5a7666776c7571273f275e58272927666a6b766a69605a696c6061273f27636469766027292762696a6764695a7364776c6467696076273f275e5827292771273f2735363037343635323537313234272927676c715a75776a716a666a69273f2763646976602778; bit_env=MTRjoBA90rhhNuVeuDF-FcaJe866A-g1QTyDOVi-AXoN4g8tjAmaHxzqXYtZoFl4d78qVN1mcbHzRbo-B30tDdL-iYB5pQHk6ICa4983L5pVS28kSbfSyENII5dsYUrof2QPrYYoCmw1VwSAf1J3dPTQv6FRIxw8QQ3AK2XtuBHwRwf6BNeSJh9Mk263Gl3mlc9u3DiKijTMmmqN-huniqXsiWLvEGyMnY39hz4bZyVUtKWB-qrCOt8qGTt6kpWCbgWLK2g3UXPA-e41JxOURI0q1yKzKNUvKNj24V-S0x1iFcUMXe89_DjmO5NE8x4dsLe2lsiBHMSxyA6R3AaY-ar1jygPF9_mZume4_GcybW8RvbxxXmxct4w0AMKnWZvRdh-BaDpKwjUtxC1kRA8mpsbgvXVFtgEqYwlGpMur-kUlmzGAhorvFSogC-AweMf3nZdcFnPZkg_rNjXkw7ihA%3D%3D; gulu_source_res=eyJwX2luIjoiM2Y3NGJhZDgxMzc3OThkNmVkN2U5ZjM3NDMzNGJkYjMwNzRhYjI0ZWJhMDZkMzdmYWNiNjgzNTY2ZjY0OGUyNCJ9; passport_auth_mix_state=zh8k3stgvoy8xkqxrm40scbxu5xmtz1eq8rckznvdlmb8uy9; download_guide=%222%2F20250315%2F0%22; bd_ticket_guard_client_data=eyJiZC10aWNrZXQtZ3VhcmQtdmVyc2lvbiI6MiwiYmQtdGlja2V0LWd1YXJkLWl0ZXJhdGlvbi12ZXJzaW9uIjoxLCJiZC10aWNrZXQtZ3VhcmQtcmVlLXB1YmxpYy1rZXkiOiJCSVRUY2F5b1IvblUyZmFTWWphbTRhWTR3QitrNE0xalhPNkhhTCtLVTFyREQyT0JSVlRSVmZtZnNVUmdTN1pBaXhzSEpUb2ZnY3hLTmJMTy9wVmQ0N1E9IiwiYmQtdGlja2V0LWd1YXJkLXdlYi12ZXJzaW9uIjoyfQ%3D%3D; passport_mfa_token=CjXyIxZUIeR0cFgOyBhlnYCHWvXe8rF2zHwDcSb67M2G12wX%2Bfg4fuXhZLujtsAss%2FxLmo4mqBpKCjwAAAAAAAAAAAAATsJ%2BhQx3PsD%2BDeRcDEKoblVvFgPjzTVlBzCsitfoTx8Tk9PZzK3uC7JxFXH8Xlbv3tUQipDsDRj2sdFsIAIiAQMBIz9o; d_ticket=f32930cb6da460ed67f51890df66ff671cee4; passport_assist_user=Cjzi4BdmWjVaFw2fgXH4Q2lRZdqw1CweDbDyFh0w-e9rOUQW2loIjiZxwc9RxFyi3ANG5a--wgW8eZMelrkaSgo8AAAAAAAAAAAAAE7CoJeN77a2yl6QKyfkHWa-OX6bq85v1QHhDL4H4dVdp0dkSBD3Dzjxm9Uh-oUl48jNEIqQ7A0Yia_WVCABIgEDH93qDg%3D%3D; n_mh=Q3TRjqTKcLq20aEd6hL6QQZ2YXXOKD-DcFlCjs0VPJE; passport_auth_status=a416d525d088943521c27317db68b5dd%2C; passport_auth_status_ss=a416d525d088943521c27317db68b5dd%2C; sid_guard=7f165ab6f8a949f13c5eae488661dddb%7C1742070518%7C5184000%7CWed%2C+14-May-2025+20%3A28%3A38+GMT; uid_tt=a1feb19606f82314ebff1cea261f291d; uid_tt_ss=a1feb19606f82314ebff1cea261f291d; sid_tt=7f165ab6f8a949f13c5eae488661dddb; sessionid=7f165ab6f8a949f13c5eae488661dddb; sessionid_ss=7f165ab6f8a949f13c5eae488661dddb; is_staff_user=false; sid_ucp_v1=1.0.0-KDM2ZDA0MDZmYmMzMDNjMWVlNjkxOTFjYmY5NmUxMmI4NDlkZDA0MDcKHwiV0PPB5QIQ9sXXvgYY7zEgDDDPjtrVBTgCQPEHSAQaAmxmIiA3ZjE2NWFiNmY4YTk0OWYxM2M1ZWFlNDg4NjYxZGRkYg; ssid_ucp_v1=1.0.0-KDM2ZDA0MDZmYmMzMDNjMWVlNjkxOTFjYmY5NmUxMmI4NDlkZDA0MDcKHwiV0PPB5QIQ9sXXvgYY7zEgDDDPjtrVBTgCQPEHSAQaAmxmIiA3ZjE2NWFiNmY4YTk0OWYxM2M1ZWFlNDg4NjYxZGRkYg; store-region=us; store-region-src=uid; login_time=1742070517274; publish_badge_show_info=%220%2C0%2C0%2C1742070518085%22; SelfTabRedDotControl=%5B%5D; _bd_ticket_crypt_doamin=2; _bd_ticket_crypt_cookie=9a42dc9a748568960ba53df9edb43a77; __security_server_data_status=1"
+                cookieData = yamlLoad["TokenManager"]["douyin"]["headers"]["Cookie"]
+                new_line = cookieData
+                # Now we need to update the line with new ttwid, and s_v_web_id
+                # Lets use regex to find the ttwid, and s_v_web_id
+                ttwid_regex = r"ttwid=[^;]+"
+                s_v_web_id_regex = r"s_v_web_id=[^;]+"
+                # Lets find the ttwid, and s_v_web_id
+                ttwid_match = re.search(ttwid_regex, cookieData)
+                s_v_web_id_match = re.search(s_v_web_id_regex, cookieData)
+                if ttwid_match:
+                    old_ttwid = ttwid_match.group(0)
+                    new_ttwid = await fetch_ttwid()
+                    new_line = new_line.replace(old_ttwid, f"ttwid={new_ttwid}")
+                if s_v_web_id_match:
+                    old_s_v_web_id = s_v_web_id_match.group(0)
+                    new_s_v_web_id = await fetch_s_v_web_id()
+                    new_line = new_line.replace(old_s_v_web_id, f"s_v_web_id={new_s_v_web_id}")
+                # Now we need to update the line in the file
+                yamlLoad["TokenManager"]["douyin"]["headers"]["Cookie"] = new_line
+                # CLose the file
+                # Now we need to write the file back to the container
+                with io.open("docker_config/config.yaml", "w", encoding="utf-8") as f:
+                    yaml.safe_dump(yamlLoad, f, allow_unicode=True, default_flow_style=False)
+                # Create a tar archive of the file
+                tarPath = shutil.make_archive("docker_config/config", "tar", root_dir="docker_config", base_dir="config.yaml")
+                with open(tarPath, "rb") as f:
+                    tar_bytes = f.read()
+                config_file_path_dir = config_file_path.rsplit("/", 1)[0]
+                print(f"Uploading {tarPath} to {config_file_path_dir}...")
+                filePut = container.put_archive(config_file_path_dir, tar_bytes)
+                if filePut:
+                    print("File updated in container.")
+                # Now we need to restart the container
+                timestamp2 = int(time.time())
+                container.restart()
+                print("Container restarted.")
+                # wait until the container is ready
+                while True:
+                    container.reload()
+                    if container.status == "running":
+                        print("Container is running.")
+                        #check to see if docker logs say "Application startup complete."
+                        if "Application startup complete." in container.logs(since=timestamp2).decode("utf-8"):
+                            print("Application startup complete.")
+                            await asyncio.sleep(3)
+                            break
+                    await asyncio.sleep(5)
+                restarts += 1
+                print(f"Restart count: {restarts}")
+                print("Restarting the request...")
+                # Restart the request
+                return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restarts)
+    except     de.NotFound:
+        print(f"Container '{container_name}' not found.")
+    """except Exception as e:
+        print("Error checking Docker logs:", e)"""
+
+async def get_with_retry(client: httpx.AsyncClient, request_url: str, params: dict,
+                         max_retries: int = 5, delay: int = 5, backoff_factor: float = 2.0, restarts: int = 0) -> Optional[httpx.Response]:
+    sinceTimestamp = int(time.time())
+    restart_count = restarts
+    if restart_count > 3:
+        print("Restart count exceeded. Exiting.")
+        raise RuntimeWarning("Max restarts reached for GET request")
+    try:
+        current_delay = delay
+        for attempt in range(max_retries):
+            try:
+                sinceTimestamp = int(time.time())
+                response = await client.get(request_url, params=params)
+                if response.status_code == 200:
+                    return response
+                else:
+                    print(f"Attempt {attempt+1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
+            except (httpx.ReadTimeout, httpx.RequestError) as e:
+                print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
+            await asyncio.sleep(current_delay)
+            current_delay *= backoff_factor
+            # Lets run the docker restart function
+            await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
+        raise RuntimeWarning("Max retries reached for GET request")
+    except RuntimeWarning as e:
+        print(f"Error during GET request: {e}")
+
+
+
 
 class Fetcher:
 
@@ -137,23 +391,23 @@ class Fetcher:
         return self.api_url + endpoint
 
     async def fetch_aweme_id(self, video_url:str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "get_aweme_id"
-            requestURl = self.urlFromEndpoint(endpoint)
-            response = await client.get(requestURl, params={"url": video_url})
+            requestURL = self.urlFromEndpoint(endpoint)
+            response = await get_with_retry(client, requestURL, {"url": video_url})
             return Fetcher.dataFromResponse(response)
 
     async def fetchVideoMetadata(self, aweme_id: str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "fetch_one_video"
-            requestURl = self.urlFromEndpoint(endpoint)
-            response = await client.get(requestURl, params={"aweme_id": aweme_id})
+            requestURL = self.urlFromEndpoint(endpoint)
+            response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id})
             return Fetcher.dataFromResponse(response)
 
     async def fetchComments(self, aweme_id: str, commentCount: int = -1):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "fetch_video_comments"
-            requestURl = self.urlFromEndpoint(endpoint)
+            requestURL = self.urlFromEndpoint(endpoint)
             # If commentCount is -1, retrieve the comment count from video metadata.
             if commentCount == -1:
                 video_data = await self.fetchVideoMetadata(aweme_id)
@@ -168,7 +422,7 @@ class Fetcher:
             # If there are zero comments, return an empty structure without making a request.
             if commentCount == 0:
                 return {"comments": []}
-            response = await client.get(requestURl, params={"aweme_id": aweme_id, "count": commentCount})
+            response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id, "count": commentCount})
             return Fetcher.dataFromResponse(response)
 
     async def fetchCommentReplies(self, aweme_id: str, comment_id: str, replyCount: int = -1):
@@ -176,13 +430,13 @@ class Fetcher:
         if replyCount == 0:
             return {"comments": []}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "fetch_video_comment_replies"
-            requestURl = self.urlFromEndpoint(endpoint)
+            requestURL = self.urlFromEndpoint(endpoint)
             if replyCount == -1:
                 # First, request a small sample to learn the total reply count
                 reply_count_response = await client.get(
-                    requestURl,
+                    requestURL,
                     params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": 20}
                 )
                 try:
@@ -195,28 +449,28 @@ class Fetcher:
                 if replyCount == 0:
                     return {"comments": []}
                 response = await client.get(
-                    requestURl,
+                    requestURL,
                     params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": replyCount}
                 )
             else:
                 response = await client.get(
-                    requestURl,
+                    requestURL,
                     params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": replyCount}
                 )
             return Fetcher.dataFromResponse(response)
 
     async def fetchVideoFile(self, video_url: str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "download"
-            requestURl = self.urlFromEndpoint(endpoint)
-            response = await client.get(requestURl, params={"url": video_url, "prefix": False, "with_watermark": False})
+            requestURL = self.urlFromEndpoint(endpoint)
+            response = await get_with_retry(client, requestURL, {"url": video_url, "prefix": False, "with_watermark": False})
             return response.content
 
     async def fetchUserHandler(self, sec_uid: str):
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0)) as client:
             endpoint = "handler_user_profile"
-            requestURl = self.urlFromEndpoint(endpoint)
-            response = await client.get(requestURl, params={"sec_uid": sec_uid})
+            requestURL = self.urlFromEndpoint(endpoint)
+            response = await get_with_retry(client, requestURL, {"sec_user_id": sec_uid})
             return Fetcher.dataFromResponse(response)
 
     @staticmethod
@@ -286,37 +540,55 @@ class Fetcher:
 
     @staticmethod
     def parseHandlerData(handler: dict) -> Dict[str, Any]:
-        user = handler["user"]
-        account_cert_info = user["account_cert_info"]
-        aweme_count = user["aweme_count"]
-        city = user["city"]
-        country = user["country"]
-        custom_verify = user["custom_verify"]
-        district = user["district"]
-        follower_count = user["follower_count"]
-        following_count = user["following_count"]
-        forward_count = user["forward_count"]
-        gender = user["gender"]
-        ip_location = user["ip_location"]
-        is_activity_user = user["is_activity_user"]
-        is_ban = user["is_ban"]
-        is_gov_media_vip = user["is_gov_media_vip"]
-        is_im_oversea_user = user["is_im_oversea_user"]
-        is_star = user["is_star"]
-        nickname = user["nickname"]
-        short_id = user["short_id"]
-        signature = user["signature"]
-        total_favorited = user["total_favorited"]
-        uid = user["uid"]
-        unique_id = user["unique_id"]
-        user_age = user["user_age"]
-        return {"account_cert_info": account_cert_info, "aweme_count": aweme_count, "city": city, "country": country,
-                "custom_verify": custom_verify, "district": district, "follower_count": follower_count,
-                "following_count": following_count, "forward_count": forward_count, "gender": gender,
-                "ip_location": ip_location, "is_activity_user": is_activity_user, "is_ban": is_ban,
-                "is_gov_media_vip": is_gov_media_vip, "is_im_oversea_user": is_im_oversea_user,
-                "is_star": is_star, "nickname": nickname, "short_id": short_id, "signature": signature,
-                "total_favorited": total_favorited, "uid": uid, "unique_id": unique_id, "user_age": user_age}
+        user = handler.get("user", {})
+        account_cert_info = user.get("account_cert_info", "")
+        aweme_count = user.get("aweme_count", "")
+        city = user.get("city", "")
+        country = user.get("country", "")
+        custom_verify = user.get("custom_verify", "")
+        district = user.get("district", "")
+        follower_count = user.get("follower_count", "")
+        following_count = user.get("following_count", "")
+        forward_count = user.get("forward_count", "")
+        gender = user.get("gender", "")
+        ip_location = user.get("ip_location", "")
+        is_activity_user = user.get("is_activity_user", "")
+        is_ban = user.get("is_ban", "")
+        is_gov_media_vip = user.get("is_gov_media_vip", "")
+        is_im_oversea_user = user.get("is_im_oversea_user", "")
+        is_star = user.get("is_star", "")
+        nickname = user.get("nickname", "")
+        short_id = user.get("short_id", "")
+        signature = user.get("signature", "")
+        total_favorited = user.get("total_favorited", "")
+        uid = user.get("uid", "")
+        unique_id = user.get("unique_id", "")
+        user_age = user.get("user_age", "")
+        return {
+            "account_cert_info": account_cert_info,
+            "aweme_count": aweme_count,
+            "city": city,
+            "country": country,
+            "custom_verify": custom_verify,
+            "district": district,
+            "follower_count": follower_count,
+            "following_count": following_count,
+            "forward_count": forward_count,
+            "gender": gender,
+            "ip_location": ip_location,
+            "is_activity_user": is_activity_user,
+            "is_ban": is_ban,
+            "is_gov_media_vip": is_gov_media_vip,
+            "is_im_oversea_user": is_im_oversea_user,
+            "is_star": is_star,
+            "nickname": nickname,
+            "short_id": short_id,
+            "signature": signature,
+            "total_favorited": total_favorited,
+            "uid": uid,
+            "unique_id": unique_id,
+            "user_age": user_age
+        }
 
     @staticmethod
     def videoDataFormer(metadata: Dict[str, Any], comments: List[Dict[str, Any]], replies: List[List[Dict[str, Any]]], index: int = None) -> Dict[str, Any]:
@@ -478,7 +750,7 @@ class Fetcher:
                     "follower_count": handler["follower_count"],
                     "following_count": handler["following_count"],
                     "forward_count": handler["forward_count"],
-                    "total_favorited": handler
+                    "total_favorited": handler["total_favorited"]
                 },
                 "flags": {
                     "is_activity_user": handler["is_activity_user"],
@@ -550,12 +822,25 @@ class Fetcher:
         print(f"Downloaded video successfully: {video_url}")
         return file_path
 
+    async def composeUserData(self, user_set: set, user_video_dict: Dict[str, Any], user_comment_dict: Dict[str, Any]):
+        for sec_uid in user_set:
+            handler = Fetcher.parseHandlerData(await self.fetchUserHandler(sec_uid))
+            videoList = user_video_dict[sec_uid]
+            commentList = user_comment_dict[sec_uid]
+            userData = Fetcher.userDictFormer(sec_uid, handler, videoList, commentList)
+            self.db.new_user(userData)
+
     async def fetch(self, dl: bool = True):
         # check if pickle exists for userSet, userVideoDict, userCommentDict if so load them, else create them
         userPickleBasePath = "userInfoPickles"
         userSetPickPath = os.path.join(userPickleBasePath, "userSet.pickle")
         userVideoDictPickPath = os.path.join(userPickleBasePath, "userVideoDict.pickle")
         userCommentDictPickPath = os.path.join(userPickleBasePath, "userCommentDict.pickle")
+        tempPickBasePath = "tempPickles"
+        tempUserSetPickPath = os.path.join(tempPickBasePath, "tempUserSet.pickle")
+        tempUserVideoDictPickPath = os.path.join(tempPickBasePath, "tempUserVideoDict.pickle")
+        tempUserCommentDictPickPath = os.path.join(tempPickBasePath, "tempUserCommentDict.pickle")
+
         if os.path.exists(userSetPickPath) and os.path.exists(userVideoDictPickPath) and os.path.exists(userCommentDictPickPath):
             userSet = pd.read_pickle(userSetPickPath)
             userVideoDict = pd.read_pickle(userVideoDictPickPath)
@@ -587,6 +872,22 @@ class Fetcher:
                 else:
                     raise ValueError("Comment ID is required for non-author entries.")
 
+        # Check if processSucceded pickle exists, if so, load and check if True, if not load tempPickles and continue
+        processSuccededPath = "processSucceded.pickle"
+        if os.path.exists(processSuccededPath):
+            processSucceded = pd.read_pickle(processSuccededPath)
+            if processSucceded:
+                print("Process already succeeded, skipping.")
+                return
+            else:
+                if os.path.exists(tempUserSetPickPath) and os.path.exists(tempUserVideoDictPickPath) and os.path.exists(tempUserCommentDictPickPath):
+                    userSet = pd.read_pickle(tempUserSetPickPath)
+                    userVideoDict = pd.read_pickle(tempUserVideoDictPickPath)
+                    userCommentDict = pd.read_pickle(tempUserCommentDictPickPath)
+                else:
+                    raise ValueError("Process failed previously, but tempPickles are missing.")
+        else:
+            processSucceded = False
 
         for index, row in self.df.iterrows():
             video_url = row['video_url']
@@ -626,19 +927,28 @@ class Fetcher:
             video_data = Fetcher.videoDataFormer(metadata, comments, replyList, current_index)
             # Save video data to the database
             self.db.new_video(video_data, search_query=hashtags)
+            # make dirs for pickle files
+            os.makedirs(tempPickBasePath, exist_ok=True)
+            # pickle userSet, userVideoDict, userCommentDict as failsafe in case of error
+            pd.to_pickle(userSet, tempUserSetPickPath)
+            pd.to_pickle(userVideoDict, tempUserVideoDictPickPath)
+            pd.to_pickle(userCommentDict, tempUserCommentDictPickPath)
 
         # Save user data to the database
-        for sec_uid in userSet:
-            handler = Fetcher.parseHandlerData(asyncio.run(self.fetchUserHandler(sec_uid)))
-            videoList = userVideoDict[sec_uid]
-            commentList = userCommentDict[sec_uid]
-            userData = Fetcher.userDictFormer(sec_uid, handler, videoList, commentList)
-            self.db.new_user(userData)
 
+
+        # make dirs for pickle files
+        os.makedirs(userPickleBasePath, exist_ok=True)
         # Save userSet, userVideoDict, userCommentDict to pickle
         pd.to_pickle(userSet, userSetPickPath)
         pd.to_pickle(userVideoDict, userVideoDictPickPath)
         pd.to_pickle(userCommentDict, userCommentDictPickPath)
+
+        # If everything succeeded, store process status to pickle
+        processSucceded = True
+        pd.to_pickle(processSucceded, processSuccededPath)
+
+
 
 
 
@@ -683,5 +993,4 @@ if __name__ == '__main__':
     # asyncio.run(quickDownloadFromCSV())
 
     fetcher = Fetcher("videos_trim_2.csv", "output_folder")
-    fetcher.db.db.drop_tables()
     asyncio.run(fetcher.fetch())

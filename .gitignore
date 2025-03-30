@@ -1,0 +1,42 @@
+### IntelliJ IDEA ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### Mac OS ###
+.DS_Store
+/Database/
+/DouyinScraper/output_folder/
+/DouyinScraper/outData/
+/DouyinScraper/interimData/
+/DouyinScraper/docker_config_tar/
+/DouyinScraper/docker_config/
+/DouyinScraper/commentTreePickle/
+/DouyinScraper/commentTreeCSVs/
+/DouyinScraper/tempPickles/
+/DouyinScraper/test/
+/DouyinScraper/videoData/
+/DouyinScraper/cookies.pickle
+/DouyinScraper/cookies.txt

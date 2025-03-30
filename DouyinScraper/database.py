@@ -18,7 +18,7 @@ class Database:
         # if path is none then use the "Database" folder in the repository root, ie the directory containing the cwd or the current working directory's parent directory
         if db_path is None:
             db_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.joinpath("Database")
-        self.db_path = db_path
+        self.db_path = pathlib.Path(db_path)
         os.makedirs(self.db_path, exist_ok=True)
         if db_name is None:
             db_name = "db.json"
@@ -27,9 +27,9 @@ class Database:
         os.makedirs(self.db_path, exist_ok=True)
         # make our json if it doesn't exist
         if not os.path.exists(self.full_path):
-            with open(self.full_path, "w") as f:
-                json.dump({}, f)
-        self.db = TinyDB(self.full_path)
+            with open(self.full_path, "w", encoding="utf-8") as f:
+                json.dump({}, f, indent=4)
+        self.db = TinyDB(self.full_path, indent=4, encoding="utf-8", ensure_ascii=False)
         self.query = Query()
         if clear:
             self.db.drop_tables()

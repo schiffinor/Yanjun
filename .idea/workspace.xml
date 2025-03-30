@@ -7,24 +7,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="Complete implementation of CommentTree.py">
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/DouScrape.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/cookieGetter.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/database.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/databaseFormat.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/parseCookiesDocker.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/ping.wav" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/scraperTest.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/testSound.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/videos_trim_2.csv" afterDir="false" />
+    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="pretty complete">
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/composeUserDataFromPickle.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/current_cookie_str.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/dataFixer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/dbtest.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/inverseDataFixer.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/log.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DouyinScraper/userDataFixer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/AccountType.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/AccountType.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/CommentTree.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/CommentTree.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/DataTypeTypes.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/DataTypeTypes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/DataTypes.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/DataTypes.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/DouScrape.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Douyin Scraper/Gender.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/Gender.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DouyinScraper/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/database.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,17 +77,22 @@
     "Python.DouScrape.executor": "Run",
     "Python.FileFetcher.executor": "Run",
     "Python.Operands.executor": "Run",
+    "Python.composeUserDataFromPickle.executor": "Run",
     "Python.cookieGetter.executor": "Run",
     "Python.cookieParse.executor": "Run",
+    "Python.dataFixer.executor": "Run",
     "Python.database.executor": "Run",
+    "Python.dbtest.executor": "Run",
+    "Python.inverseDataFixer.executor": "Run",
     "Python.scraperTest.executor": "Run",
     "Python.testSound.executor": "Run",
+    "Python.userDataFixer.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
     "git-widget-placeholder": "master",
     "ignore.virus.scanning.warn.message": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/schif/Documents/Coding/Yanjun/DouyinScraper",
+    "last_opened_file_path": "C:/Users/schif/Documents/Coding/Yanjun/Database",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -106,6 +105,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\schif\Documents\Coding\Yanjun\Database" />
       <recent name="C:\Users\schif\Documents\Coding\Yanjun\DouyinScraper" />
       <recent name="C:\Users\schif\Documents\Coding\Yanjun\Douyin Scraper" />
       <recent name="C:\Users\schif\Documents\Coding\Yanjun" />
@@ -181,7 +181,9 @@
       <workItem from="1742854039028" duration="14354000" />
       <workItem from="1742875091826" duration="1355000" />
       <workItem from="1742876697512" duration="95000" />
-      <workItem from="1742876802111" duration="38003000" />
+      <workItem from="1742876802111" duration="41334000" />
+      <workItem from="1743027300291" duration="1037000" />
+      <workItem from="1743029183536" duration="39936000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -199,7 +201,15 @@
       <option name="project" value="LOCAL" />
       <updated>1741313720342</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="pretty complete">
+      <option name="closed" value="true" />
+      <created>1742935183115</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1742935183115</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -219,21 +229,27 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="1th step" />
     <MESSAGE value="Complete implementation of CommentTree.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="Complete implementation of CommentTree.py" />
+    <MESSAGE value="pretty complete" />
+    <option name="LAST_COMMIT_MESSAGE" value="pretty complete" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
     <select />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Yanjun$scraperTest.coverage" NAME="scraperTest Coverage Results" MODIFIED="1742874996771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$Operands.coverage" NAME="Operands Coverage Results" MODIFIED="1741214551376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Yanjun$CommentTree.coverage" NAME="CommentTree Coverage Results" MODIFIED="1742859653220" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$FileFetcher.coverage" NAME="FileFetcher Coverage Results" MODIFIED="1742931467541" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$cookieGetter.coverage" NAME="cookieGetter Coverage Results" MODIFIED="1742073130993" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1742886128398" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$dbtest.coverage" NAME="dbtest Coverage Results" MODIFIED="1743207642371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1743207532642" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$testSound.coverage" NAME="testSound Coverage Results" MODIFIED="1742077862104" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$DouScrape.coverage" NAME="DouScrape Coverage Results" MODIFIED="1742254434337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$scraperTest.coverage" NAME="scraperTest Coverage Results" MODIFIED="1742874996771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$Operands.coverage" NAME="Operands Coverage Results" MODIFIED="1741214551376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Yanjun$dataFixer.coverage" NAME="dataFixer Coverage Results" MODIFIED="1743205582401" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$FileFetcher.coverage" NAME="FileFetcher Coverage Results" MODIFIED="1743213671159" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$composeUserDataFromPickle.coverage" NAME="composeUserDataFromPickle Coverage Results" MODIFIED="1743223599002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$cookieGetter.coverage" NAME="cookieGetter Coverage Results" MODIFIED="1742073130993" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$inverseDataFixer.coverage" NAME="inverseDataFixer Coverage Results" MODIFIED="1743208093355" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$userDataFixer.coverage" NAME="userDataFixer Coverage Results" MODIFIED="1743194870150" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$cookieParse.coverage" NAME="cookieParse Coverage Results" MODIFIED="1742877095566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="C:\Users\schif\Documents\Coding\Yanjun\DouyinScraper" />
   </component>
 </project>
