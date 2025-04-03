@@ -1,24 +1,12 @@
 from FileFetcher import *
 import pickle
 import json
-import httpx
 import asyncio
-from typing import Dict, Any, List, Set
-import sys
+from typing import Dict, Any, Set
 import os
-import csv
-import requests
-from datetime import datetime
-from douyin_tiktok_scraper.scraper import Scraper
-import pandas as pd
-import numpy as np
-from datetime import datetime as dt
-import aiofiles
-import warnings as wn
-import docker
-import time
-import database
 
+
+# noinspection DuplicatedCode
 def composeUserDataFromTempPickles(basePicklePath: str, from_index: int = 0, to_index: int = -1) -> None:
     """
     This function reads user data from a pickle file and writes it to database files.
@@ -95,8 +83,75 @@ def composeUserDataFromTempPickles(basePicklePath: str, from_index: int = 0, to_
 
     asyncio.run(fileFetcher.composeUserData(userSetSub, userVideoDictSub, userCommentDictSub))
 
+
+# noinspection DuplicatedCode
 if __name__ == "__main__":
     # drop user table in database
-    dbb = database.Database()
-    composeUserDataFromTempPickles("tempPickles", 0, 3559)
+    """dbb = database.Database()
+    composeUserDataFromTempPickles("tempPickles")"""
+    # load pickles to check
+    basePicklePath = "tempPickles"
+    picklePath = os.path.join(basePicklePath, "tempUserSet.pickle")
+    commentDictPath = os.path.join(basePicklePath, "tempUserCommentDict.pickle")
+    videoDictPath = os.path.join(basePicklePath, "tempUserVideoDict.pickle")
+    # Check if the pickle files exist
+    if not os.path.exists(picklePath):
+        raise FileNotFoundError(f"Pickle file not found: {picklePath}")
+    if not os.path.exists(commentDictPath):
+        raise FileNotFoundError(f"Comment dictionary file not found: {commentDictPath}")
+    if not os.path.exists(videoDictPath):
+        raise FileNotFoundError(f"Video dictionary file not found: {videoDictPath}")
+    # Load the pickle files
+    with open(picklePath, "rb") as f:
+        userSet: Set[str] = pickle.load(f)
+    with open(commentDictPath, "rb") as f:
+        userCommentDict: Dict[str, list] = pickle.load(f)
+    with open(videoDictPath, "rb") as f:
+        userVideoDict:  Dict[str, list] = pickle.load(f)
+    # load database as jsonfile
+    database_path = "C:\\Users\\schif\\Documents\\Coding\\Yanjun\\Database\\db.json"
+    with open(database_path, "r", encoding="utf-8") as f:
+        db: Dict[str, Any] = json.load(f)
+    users: Dict[str, dict] = db["Users"]
+    # get the sec_uids corresponding to the userSet
+    sec_uids = [user["sec_uid"] for user in users.values()]
+    # subtract the sec_uids from the userSet
+    userSetSub = userSet.difference(set(sec_uids))
+    # create a new userCommentDict with the userSetSub
+    userCommentDictSub = {}
+    for user in userSetSub:
+        if user in userCommentDict:
+            userCommentDictSub[user] = userCommentDict[user]
+    # create a new userVideoDict with the userSetSub
+    userVideoDictSub = {}
+    for user in userSetSub:
+        if user in userVideoDict:
+            userVideoDictSub[user] = userVideoDict[user]
+    # save the userSetSub, userCommentDictSub and userVideoDictSub to a new pickle file base math modPickle//
+    bPP = "modPickle"
+    os.makedirs(bPP, exist_ok=True)
+    picklePath = os.path.join(bPP, "tempUserSet.pickle")
+    commentDictPath = os.path.join(bPP, "tempUserCommentDict.pickle")
+    videoDictPath = os.path.join(bPP, "tempUserVideoDict.pickle")
+    # save the userSetSub to a pickle file
+    with open(picklePath, "wb") as f:
+        # noinspection PyTypeChecker
+        pickle.dump(userSetSub, f)
+    # save the userCommentDictSub to a pickle file
+    with open(commentDictPath, "wb") as f:
+        # noinspection PyTypeChecker
+        pickle.dump(userCommentDictSub, f)
+    # save the userVideoDictSub to a pickle file
+    with open(videoDictPath, "wb") as f:
+        # noinspection PyTypeChecker
+        pickle.dump(userVideoDictSub, f)
+    # check if the pickle files exist
+    if not os.path.exists(picklePath):
+        raise FileNotFoundError(f"Pickle file not found: {picklePath}")
+    if not os.path.exists(commentDictPath):
+        raise FileNotFoundError(f"Comment dictionary file not found: {commentDictPath}")
+    if not os.path.exists(videoDictPath):
+        raise FileNotFoundError(f"Video dictionary file not found: {videoDictPath}")
+    composeUserDataFromTempPickles(bPP)
+
 

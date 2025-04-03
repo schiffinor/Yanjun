@@ -1,7 +1,6 @@
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
 import pickle
-from http.cookiejar import MozillaCookieJar, Cookie
+from http.cookiejar import MozillaCookieJar
 from typing import Dict, Any, List
 
 

@@ -4,10 +4,6 @@ database is currently formatted as json instead of tinyDB so lets fix that, ie t
 
 import json
 from typing import Dict, Any, List
-import sys
-import os
-import warnings as wn
-import database
 
 def fixDatabase() -> None:
     """
@@ -35,6 +31,7 @@ def fixDatabase() -> None:
     }
     # Override the original db.json file with the modified one
     with open(database_path, "w", encoding="utf-8") as f:
+        # noinspection PyTypeChecker
         json.dump(modified_db, f, ensure_ascii=False, indent=4)
     print("Database fixed successfully.")
 

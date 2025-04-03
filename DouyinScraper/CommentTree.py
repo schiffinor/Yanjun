@@ -24,7 +24,6 @@ import random
 import uuid
 import warnings as wn
 import pickle
-import json
 from datetime import datetime as dt
 from datetime import date as dtd
 from datetime import time as dtt
@@ -142,9 +141,10 @@ def get_operator(op_input):
     return op_func
 
 
-def parseOpFunc(op_input: Union[str, Op.RelOperator, Callable[[Any, Any], bool]]) -> Callable[[Any, Any], bool]:
+def parseOpFunc(op_input: Union[str, Op.RelOperator, Callable[[Any, Any], bool]], cast_type: bool = True) -> Callable[[Any, Any], bool]:
     """
-    Parse the operator input and return a binary operator function.
+    Parse the operator input and return a binary operator function that casts the first argument
+    to the type of the second argument before comparison.
 
     The operator input can be one of the following:
       - A string representing an operator ("==", "!=", "<", "<=", ">", ">=").
@@ -155,20 +155,34 @@ def parseOpFunc(op_input: Union[str, Op.RelOperator, Callable[[Any, Any], bool]]
     a lambda is created to use Python's bitwise operator overloading to apply it. Otherwise, if it's a callable,
     it is returned directly.
 
+    In every case, the returned function will cast the first argument (data) to the type of the second
+    argument (the value to compare to) before applying the operator.
+
     :param op_input: The operator input (string, Op.RelOperator, or callable).
-    :return: A function that takes two arguments and applies the operator.
+    :param cast_type: If True, cast the first argument to the type of the second argument.
+    :return: A function that takes two arguments, casts the first to the type of the second, and applies the operator.
     :raises TypeError: If the input is not one of the supported types.
     """
+    def wrap_operator(opF: Callable[[Any, Any], bool]) -> Callable[[Any, Any], bool]:
+        def try_cast(a, b):
+            try:
+                return opF(type(b)(a), b)
+            except TypeError as e:
+                wn.warn(f"TypeError: {e}. Attempting to cast {a} to {type(b)} failed. Returning False.")
+                return opF(a, b)
+        return try_cast
+
     if isinstance(op_input, str):
         opF = get_operator(op_input)
+        return wrap_operator(opF) if cast_type else opF
     elif isinstance(op_input, Op.RelOperator):
         opF = lambda a, b: a | op_input | b
+        return wrap_operator(opF) if cast_type else opF
     elif callable(op_input):
-        opF = op_input
+        return wrap_operator(op_input) if cast_type else op_input
     else:
-        raise TypeError(
-            f"Operator must be either a string, a RelOperator, or a callable function. Operator input: {op_input}")
-    return opF
+        raise TypeError(f"Operator must be either a string, a RelOperator, or a callable function. Operator input: {op_input}")
+
 
 
 class UserData:
@@ -2246,9 +2260,9 @@ class CommentTree:
         - The data of the node (all fields).
         - The latest data collection date time.
 
-        :param path: The path to save the CSV file. If None, defaults to 'commentTreeCSVs\{self.uuidStr}\commentTree.csv'.
+        :param path: The path to save the CSV file. If None, defaults to 'commentTreeCSVs\\{self.uuidStr}\\commentTree.csv'.
         """
-        # If path is none default to 'commentTreeCSVs\{uuidStr}\{current datetime}\commentTree.csv'
+        # If path is none default to 'commentTreeCSVs\\{uuidStr}\\{current datetime}\\commentTree.csv'
         if path is None:
             path = f"commentTreeCSVs\\{self.uuidStr}\\{(str(dt.now()).replace(" ","_").replace(":", "-").replace(".", "_"))}\\commentTree.csv"
         # Create the directory if it does not exist
@@ -2393,6 +2407,7 @@ class CommentTree:
         # Create the directory if it does not exist
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as f:
+            # noinspection PyTypeChecker
             pickle.dump(self, f)
 
     @staticmethod
@@ -2704,11 +2719,11 @@ if __name__ == "__main__":
         Reorganize nodes into a tree with the following structure:
 
                     Node0
-                   /     \
+                   /     \\
                Node1      Node8
-               /    \        \
+               /    \\        \\
            Node2   Node5     Node9
-           /   \   /   \     /   \
+           /   \\   /   \\     /   \\
         Node3 Node4 Node6 Node7 Node10 Node11
 
         Assumes nodeList has exactly 12 nodes.

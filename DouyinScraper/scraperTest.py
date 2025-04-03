@@ -1,19 +1,8 @@
 """
 Test the scraper
 """
-import json
-import httpx
-import asyncio
-import sys
-import os
-import csv
-import requests
-from datetime import datetime
+
 from douyin_tiktok_scraper.scraper import Scraper
-import pandas as pd
-import numpy as np
-from datetime import datetime as dt
-import warnings as wn
 
 scraper = Scraper()
 print(scraper.douyin_api_headers)

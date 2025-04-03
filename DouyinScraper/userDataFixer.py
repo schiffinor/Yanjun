@@ -13,15 +13,12 @@ I will fix this by creating a new function that will fix the userDict and then w
 
 import json
 from typing import Dict, Any, List
-import sys
-import os
 import warnings as wn
 import database
 
 def userDictFormer() -> None:
     """
     This function takes a userDict and returns a new userDict with the correct values.
-    :param userDict: The userDict to be fixed.
     :return: The fixed userDict.
     """
     # Load the db.json file
@@ -71,6 +68,7 @@ def userDictFormer() -> None:
     if user_approval.lower() == "y":
         # write the fixed userDict to the database
         with open(database_path, "w", encoding="utf-8") as f:
+            # noinspection PyTypeChecker
             json.dump(db, f, indent=4, ensure_ascii=False)
         print("Database overwritten.")
     else:

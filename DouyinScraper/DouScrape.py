@@ -5,17 +5,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import selenium.common.exceptions as selexcept
 import time
 from typing import List, Dict, Any
 import numpy as np
 import pandas as pd
-import bs4 as bs4
 from itertools import combinations
 import pickle
-from multiprocessing import Process
 import winsound as ws
 global driver
 global wait1
@@ -28,6 +26,7 @@ global pause_observer_script
 global resume_observer_script
 
 
+# noinspection DuplicatedCode
 def scrape_hashtags(n: int,
                     htList: List[str],
                     userPhone: str = None,
@@ -132,7 +131,6 @@ def scrape_hashtags(n: int,
 
     driver.execute_script(mutation_observer_script)
 
-    all_videos = []
     # Determine how many videos to collect per hashtag
     videos_per_hashtag = int(2.5 * n) // (len(htList)) if htList else 0
     video_sample_per_ht = videos_per_hashtag * sampleMult
@@ -158,10 +156,9 @@ def scrape_hashtags(n: int,
             driver.execute_script(pause_observer_script)
             if wfl:
                 # Wait for the search box to appear
-                loginAppear = -1
                 try:
                     # should be 10 sec temporarily 1 sec
-                    wait1.until(EC.presence_of_element_located((By.CLASS_NAME, "douyin-login__close.dy-account-close")))
+                    wait1.until(ec.presence_of_element_located((By.CLASS_NAME, "douyin-login__close.dy-account-close")))
                     loginAppear = 1
                 except selexcept.TimeoutException:
                     wn.warn("Login box did not appear.")
@@ -175,7 +172,7 @@ def scrape_hashtags(n: int,
                         wrapTab = driver.find_element(by=By.CLASS_NAME, value="web-login-common-wrapper__tab")
                         wrapTabList = wrapTab.find_element(by=By.CLASS_NAME, value="web-login-tab-list")
                         wrapTabList.find_element(by=By.CLASS_NAME, value="web-login-tab-list__item").click()
-                        wait10.until(EC.presence_of_element_located((By.CLASS_NAME, "web-login-normal-input__input")))
+                        wait10.until(ec.presence_of_element_located((By.CLASS_NAME, "web-login-normal-input__input")))
                         phoneInput = driver.find_element(by=By.CLASS_NAME, value="web-login-normal-input__input")
                         phoneInput.send_keys(userPhone)
                         passInput = driver.find_element(by=By.CLASS_NAME, value="web-login-button-input__input")
@@ -191,7 +188,7 @@ def scrape_hashtags(n: int,
             # Scroll the element into view
             driver.execute_script("console.log('were here');arguments[0].scrollIntoView(true);", element)
             # Wait until the element is visible (up to 10 seconds)
-            wait3.until(EC.visibility_of(element))
+            wait3.until(ec.visibility_of(element))
             # Then perform the hover action
             ActionChains(driver).move_to_element(element).perform()
 
@@ -203,22 +200,24 @@ def scrape_hashtags(n: int,
             waitT2 = WebDriverWait(driver, timeout2)
             # Pause for captcha
             try:
-                waitT1.until(EC.visibility_of_element_located((By.ID, "captcha_container")))
+                waitT1.until(ec.visibility_of_element_located((By.ID, "captcha_container")))
                 # give user time to solve captcha
                 try:
                     wn.warn("Captcha detected. Please solve the captcha.")
                     # play sound to alert user to solve captcha
+                    # noinspection DuplicatedCode
                     ws.Beep(1000, 300)
 
                     # wait for user to solve captcha
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
                     # play sound to alert user to solve captcha
+                    # noinspection DuplicatedCode
                     ws.Beep(1000, 300)
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
-                    waitT2.until(EC.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
+                    waitT2.until(ec.invisibility_of_element_located((By.ID, "captcha_container")))
                     print("you're dumb, solve the captcha")
                 except selexcept.TimeoutException:
                     wn.warn("captcha gone, you're good gang")
@@ -227,6 +226,7 @@ def scrape_hashtags(n: int,
                 wn.warn("Captcha not found.")
             return time.time() - timeStart
 
+        # noinspection DuplicatedCode
         def whole_search():
             # various wait times
             global driver
@@ -260,13 +260,12 @@ def scrape_hashtags(n: int,
             print(f"Collecting {videos_per_hashtag} videos for hashtag.")
 
             # Check for login box and log in if necessary
-            waitForLogin = waitForLgin
 
             # check for captcha
             captchaPause()
 
             # wait 3 sec for the search box to appear
-            wait3.until(EC.presence_of_element_located((By.ID, "douyin-header")))
+            wait3.until(ec.presence_of_element_located((By.ID, "douyin-header")))
             douyinHeader = driver.find_element(by=By.ID, value="douyin-header")
             searchBox = douyinHeader.find_element(by=By.XPATH, value="//div/div[1]/input[@data-e2e='searchbar-input']")
             login(True)
@@ -275,7 +274,7 @@ def scrape_hashtags(n: int,
 
             # wait 5 sec for the sort button to appear
             try:
-                wait3.until(EC.presence_of_element_located((By.CLASS_NAME, "search-result-card")))
+                wait3.until(ec.presence_of_element_located((By.CLASS_NAME, "search-result-card")))
             except selexcept.TimeoutException:
                 try:
                     searchBttn = driver.find_element(by=By.XPATH, value="//div/div[2]/div/button[@data-e2e='searchbar-button']")
@@ -309,7 +308,7 @@ def scrape_hashtags(n: int,
                             captchaPause()
                             driver.execute_script(mutation_observer_script)
                             # wait 3 sec for the search box to appear
-                            wait3.until(EC.presence_of_element_located((By.ID, "douyin-header")))
+                            wait3.until(ec.presence_of_element_located((By.ID, "douyin-header")))
                             douyinHeader = driver.find_element(by=By.ID, value="douyin-header")
                             searchBox = douyinHeader.find_element(by=By.XPATH, value="//div/div[1]/input[@data-e2e='searchbar-input']")
                             captchaPause()
@@ -329,8 +328,8 @@ def scrape_hashtags(n: int,
             timeout = time.time() + 30  # 30-second timeout
             while not gridButtonFnd and not gridButtonFnd2 and time.time() < timeout:
                 try:
-                    wait3.until(EC.presence_of_element_located((By.XPATH, "/html/body/div[2]/div[1]/div[3]/div[3]/div/div/div[1]/div[1]/div/div/div/div[1]")))
-                    wait3.until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div[1]/div[3]/div[3]/div/div/div[1]/div[1]/div/div/div/div[1]")))
+                    wait3.until(ec.presence_of_element_located((By.XPATH, "/html/body/div[2]/div[1]/div[3]/div[3]/div/div/div[1]/div[1]/div/div/div/div[1]")))
+                    wait3.until(ec.element_to_be_clickable((By.XPATH, "/html/body/div[2]/div[1]/div[3]/div[3]/div/div/div[1]/div[1]/div/div/div/div[1]")))
                     gridButtonFnd = True
                     try:
                         gridButton = driver.find_element(by=By.XPATH, value="/html/body/div[2]/div[1]/div[3]/div[3]/div/div/div[1]/div[1]/div/div/div/div[1]")
@@ -352,7 +351,7 @@ def scrape_hashtags(n: int,
 
             # click video tab
             try:
-                wait5.until(EC.presence_of_element_located((By.ID, "waterFallScrollContainer")))
+                wait5.until(ec.presence_of_element_located((By.ID, "waterFallScrollContainer")))
                 return driver
             except selexcept.TimeoutException:
                 wn.warn("Video tab not found.")
@@ -394,11 +393,11 @@ def scrape_hashtags(n: int,
             gridButton.click()"""
 
             try:
-                wait3.until(EC.presence_of_element_located((By.XPATH, "//ul[@data-e2e='scroll-list']")))
+                wait3.until(ec.presence_of_element_located((By.XPATH, "//ul[@data-e2e='scroll-list']")))
                 # Scroll to the bottom of the page to load more videos until the desired number of videos is reached.
 
                 # wait until requisite stuff appears:
-                wait10.until(EC.presence_of_element_located((By.XPATH, "//div[@class='search-result-card']//a/div/div[1]/div/div[2]/div[2]/div[3]/span")))
+                wait10.until(ec.presence_of_element_located((By.XPATH, "//div[@class='search-result-card']//a/div/div[1]/div/div[2]/div[2]/div[3]/span")))
                 return driver
             except selexcept.TimeoutException:
                 wn.warn("Video tab not found.")
@@ -617,6 +616,7 @@ if __name__ == "__main__":
     top_n = 250
 
     videos = scrape_hashtags(top_n, hashtags2, saveInterimData=True, calcOverlap=False, outputData=True, sampleMult=4)
+    # noinspection PyTypeChecker
     pickle.dump(videos, open("videos2.pickle", "wb"))
     print(videos)
     print("Top videos:")
