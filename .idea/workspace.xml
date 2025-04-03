@@ -7,8 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="database.py file completed">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="working on FileFetcher.py">
       <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -177,7 +176,7 @@
       <workItem from="1743027300291" duration="1037000" />
       <workItem from="1743029183536" duration="46882000" />
       <workItem from="1743464150723" duration="33251000" />
-      <workItem from="1743581779362" duration="34359000" />
+      <workItem from="1743581779362" duration="34668000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -243,7 +242,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743650804251</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="working on FileFetcher.py">
+      <option name="closed" value="true" />
+      <created>1743654293515</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1743654293515</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -265,7 +272,8 @@
     <MESSAGE value="Complete implementation of CommentTree.py" />
     <MESSAGE value="pretty complete" />
     <MESSAGE value="database.py file completed" />
-    <option name="LAST_COMMIT_MESSAGE" value="database.py file completed" />
+    <MESSAGE value="working on FileFetcher.py" />
+    <option name="LAST_COMMIT_MESSAGE" value="working on FileFetcher.py" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

@@ -145,14 +145,15 @@ def basePather(basePath: str = None):
     """
     # If no path is provided, generate one using the current timestamp.
     if basePath is None:
-    # Create a folder name based on the current date and time.
-    # Note: This replaces spaces, colons, and periods with characters safe for file names.
-        basePath = f"videoData\\{(str(dt.now()).replace(" ","_").replace(":", "-").replace(".", "_"))}\\"
+        # Create a folder name based on the current date and time.
+        # Note: This replaces spaces, colons, and periods with characters safe for file names.
+        basePath = f"videoData\\{(str(dt.now()).replace(" ", "_").replace(":", "-").replace(".", "_"))}\\"
         return basePath
     else:
         # If a base path is provided, return it unchanged.
         return basePath
-    
+
+
 def downloadVideoPath(index: int, basePath: str = None) -> str:
     """
     Construct a file path for a video file based on an index and an optional base path.
@@ -188,6 +189,7 @@ def get_docker_client():
         print("Error connecting to Docker:", e)
         return None
 
+
 def get_container_by_name(container_name: str):
     """
     Retrieve a Docker container object based on its name.
@@ -207,6 +209,7 @@ def get_container_by_name(container_name: str):
         # If the container isn't found, notify the user.
         print(f"Container '{container_name}' not found.")
         return None
+
 
 def get_docker_logs(container_name: str, since: int = None) -> str:
     """
@@ -228,7 +231,8 @@ def get_docker_logs(container_name: str, since: int = None) -> str:
         print("Error checking Docker logs:", e)
         return logs
 
-def check_docker_logs(container_name: str, since: int = None, tail: int  = None) -> bool:
+
+def check_docker_logs(container_name: str, since: int = None, tail: int = None) -> bool:
     """
     Check the Docker logs for specific error patterns to determine if there is a problem.
 
@@ -251,6 +255,7 @@ def check_docker_logs(container_name: str, since: int = None, tail: int  = None)
     # Delegate to the helper function that checks logs for given error patterns.
     return check_docker_logs_for_errorPattern(error_patterns, since=since, tail=tail)
 
+
 def check_docker_logs_for_ttwid_update_error():
     """
     Check Docker logs specifically for errors related to ttwid update issues.
@@ -266,6 +271,7 @@ def check_docker_logs_for_ttwid_update_error():
         "400 Bad Request"
     ]
     return check_docker_logs_for_errorPattern(error_patterns, since=None, tail=None)
+
 
 def check_docker_logs_for_ttwid_update_error2():
     """
@@ -283,6 +289,7 @@ def check_docker_logs_for_ttwid_update_error2():
     ]
     return check_docker_logs_for_errorPattern(error_patterns, since=None, tail=25)
 
+
 def check_docker_logs_strict():
     """
     Strictly check Docker logs for critical ttwid update errors.
@@ -298,6 +305,7 @@ def check_docker_logs_strict():
         "<class 'NoneType'>"
     ]
     return check_docker_logs_for_errorPattern(error_patterns, since=None, tail=25)
+
 
 def check_docker_logs_for_errorPattern(errorPattern: List[str], since: int = None, tail: int = None) -> bool:
     """
@@ -325,6 +333,7 @@ def check_docker_logs_for_errorPattern(errorPattern: List[str], since: int = Non
         print("Error checking Docker logs:", e)
         return False
 
+
 async def fetch_ttwid():
     """
     Asynchronously fetch the ttwid value from the Douyin API.
@@ -339,6 +348,7 @@ async def fetch_ttwid():
         # Extract and return the ttwid from the response data.
         return Fetcher.dataFromResponse(response)["ttwid"]
 
+
 async def fetch_s_v_web_id():
     """
     Asynchronously fetch the s_v_web_id value from the Douyin API.
@@ -350,6 +360,7 @@ async def fetch_s_v_web_id():
         response = await get_with_retry(client, requestURL, params={})
         return Fetcher.dataFromResponse(response)["s_v_web_id"]
 
+
 async def docker_restart(client: httpx.AsyncClient,
                          request_url: str,
                          params: dict,
@@ -357,7 +368,7 @@ async def docker_restart(client: httpx.AsyncClient,
                          delay: int = 5,
                          backoff_factor: float = 2.0,
                          restarts: int = 0,
-                         since: int = None) -> Optional[ httpx.Response]:
+                         since: int = None) -> Optional[httpx.Response]:
     """
     Restart the Docker container if errors are detected in its logs, then reattempt the API request.
 
@@ -380,7 +391,8 @@ async def docker_restart(client: httpx.AsyncClient,
         print(dLogs.splitlines()[-1])
         # If error patterns are found, proceed to restart the container.
         if check_docker_logs(container_name, since=sinceTimestamp) or (check_docker_logs_for_ttwid_update_error2()):
-            print("Error detected in Docker logs. \nCheck if error is of type: \nERROR    无效响应类型。响应类型: <class 'NoneType'>")
+            print(
+                "Error detected in Docker logs. \nCheck if error is of type: \nERROR    无效响应类型。响应类型: <class 'NoneType'>")
             if check_docker_logs_for_ttwid_update_error2():
                 print("Detected specific ttwid update error in Docker logs.")
                 print("Initiating update and restart of the container.")
@@ -420,7 +432,8 @@ async def docker_restart(client: httpx.AsyncClient,
                 with io.open("docker_config/config.yaml", "w", encoding="utf-8") as f:
                     yaml.safe_dump(yamlLoad, f, allow_unicode=True, default_flow_style=False)
                 # Create a tar archive of the updated config file.
-                tarPath = shutil.make_archive("docker_config/config", "tar", root_dir="docker_config", base_dir="config.yaml")
+                tarPath = shutil.make_archive("docker_config/config", "tar", root_dir="docker_config",
+                                              base_dir="config.yaml")
                 with open(tarPath, "rb") as f:
                     tar_bytes = f.read()
                 config_file_path_dir = config_file_path.rsplit("/", 1)[0]
@@ -446,10 +459,12 @@ async def docker_restart(client: httpx.AsyncClient,
                 print(f"Restart count: {restarts}")
                 print("Restarting the request...")
                 # After the container has restarted, reattempt the API request.
-                return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restarts)
+                return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay,
+                                            backoff_factor=backoff_factor, restarts=restarts)
     except de.NotFound:
         print(f"Container '{container_name}' not found.")
     # Additional exception handling could be added here if desired.
+
 
 # Updated fetch_video_stream_with_retry with increased timeout and explicit ReadTimeout handling.
 async def fetch_video_stream_with_retry(client: httpx.AsyncClient,
@@ -503,19 +518,22 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient,
                                 raise Exception(f"Incomplete download: {downloaded} bytes (expected {expected})")
                             return b"".join(chunks)
                         else:
-                            print(f"Attempt {attempt+1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
+                            print(
+                                f"Attempt {attempt + 1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
                 except (httpx.ReadTimeout, httpx.RequestError, Exception) as e:
-                    print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
+                    print(f"Attempt {attempt + 1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
                 await asyncio.sleep(current_delay)
                 current_delay *= backoff_factor
                 # If critical errors are detected in Docker logs, trigger a container restart.
                 if check_docker_logs_strict():
-                    await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
+                    await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay,
+                                         backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             restart_count = 0
             raise RuntimeWarning("Max retries reached for video stream request")
         except RuntimeWarning as e:
             print(f"Error during video stream request: {e}")
-            await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
+            await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay,
+                                 backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             await asyncio.sleep(600)
             try:
                 await client.aclose()
@@ -523,10 +541,12 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient,
                 print(f"Error closing client: {e}")
             del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
-            return await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
+            return await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries,
+                                                       delay=delay, backoff_factor=backoff_factor)
     except Exception as e:
         print(f"Exception: {e}")
-        print("This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
+        print(
+            "This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
         responseOut = None
         while responseOut is None:
             await asyncio.sleep(600)
@@ -536,12 +556,14 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient,
                 print(f"Error closing client: {e}")
             del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
-            responseOut = await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
+            responseOut = await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries,
+                                                              delay=delay, backoff_factor=backoff_factor)
             if responseOut is not None:
                 break
             else:
                 wn.warn("Response is None, retrying...")
         return responseOut
+
 
 async def get_with_retry(client: httpx.AsyncClient,
                          request_url: str,
@@ -582,18 +604,21 @@ async def get_with_retry(client: httpx.AsyncClient,
                     if response.status_code == 200:
                         return response
                     else:
-                        print(f"Attempt {attempt+1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
+                        print(
+                            f"Attempt {attempt + 1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
                 except (httpx.ReadTimeout, httpx.RequestError) as e:
-                    print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
+                    print(f"Attempt {attempt + 1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
                 await asyncio.sleep(current_delay)
                 current_delay *= backoff_factor
                 if check_docker_logs_strict():
-                    await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
+                    await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay,
+                                         backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             restart_count = 0
             raise RuntimeWarning("Max retries reached for GET request")
         except RuntimeWarning as e:
             print(f"Error during GET request: {e}")
-            await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
+            await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay,
+                                 backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             await asyncio.sleep(600)
             try:
                 await client.aclose()
@@ -601,10 +626,12 @@ async def get_with_retry(client: httpx.AsyncClient,
                 print(f"Error closing client: {e}")
             del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
-            return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
+            return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay,
+                                        backoff_factor=backoff_factor)
     except Exception as e:
         print(f"Exception: {e}")
-        print("This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
+        print(
+            "This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
         responseOut = None
         while responseOut is None:
             await asyncio.sleep(600)
@@ -614,7 +641,8 @@ async def get_with_retry(client: httpx.AsyncClient,
                 print(f"Error closing client: {e}")
             del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
-            responseOut = await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
+            responseOut = await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay,
+                                               backoff_factor=backoff_factor)
             if responseOut is not None:
                 break
             else:
@@ -722,7 +750,7 @@ class Fetcher:
             return self.api_url + endpoint[1:]
         return self.api_url + endpoint
 
-    async def fetch_aweme_id(self, video_url:str):
+    async def fetch_aweme_id(self, video_url: str):
         """
         Asynchronously fetch the aweme_id for a given video URL.
 
@@ -798,8 +826,9 @@ class Fetcher:
                 # Make an initial request to determine the total number of replies.
                 # First, request a small sample to learn the total reply count
                 reply_count_response = await get_with_retry(client, requestURL,
-                    params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": 20}
-                )
+                                                            params={"item_id": aweme_id, "comment_id": comment_id,
+                                                                    "cursor": 0, "count": 20}
+                                                            )
                 try:
                     replyCount = reply_count_response.json()["data"]["comments"]["0"]["comment_reply_total"]
                 except Exception as e:
@@ -810,12 +839,14 @@ class Fetcher:
                 if replyCount == 0:
                     return {"comments": []}
                 response = await get_with_retry(client, requestURL,
-                    params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": replyCount}
-                )
+                                                params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0,
+                                                        "count": replyCount}
+                                                )
             else:
                 response = await get_with_retry(client, requestURL,
-                    params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": replyCount}
-                )
+                                                params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0,
+                                                        "count": replyCount}
+                                                )
             return Fetcher.dataFromResponse(response)
 
     async def fetchVideoFile(self, video_url: str):
@@ -828,7 +859,8 @@ class Fetcher:
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "download"
             requestURL = self.urlFromEndpoint(endpoint)
-            response = await get_with_retry(client, requestURL, {"url": video_url, "prefix": False, "with_watermark": False})
+            response = await get_with_retry(client, requestURL,
+                                            {"url": video_url, "prefix": False, "with_watermark": False})
             return response.content
 
     async def fetchUserHandler(self, sec_uid: str):
@@ -872,7 +904,8 @@ class Fetcher:
         video_tag = aweme_detail.get("video_tag", [])
         # Return a structured dictionary with the extracted data.
         return {"aweme_id": aweme_id, "sec_uid": sec_uid, "caption": caption, "create_time": create_time, "desc": desc,
-                "duration": duration, "item_title": item_title, "ocr_content": ocr_content, "admire_count": admire_count,
+                "duration": duration, "item_title": item_title, "ocr_content": ocr_content,
+                "admire_count": admire_count,
                 "collect_count": collect_count, "comment_count": comment_count, "digg_count": digg_count,
                 "play_count": play_count, "share_count": share_count, "text_extra": text_extra, "video_tag": video_tag}
 
@@ -900,8 +933,10 @@ class Fetcher:
             is_note_comment = comment.get("is_note_comment", "")
             # Append the structured comment data.
             comment_data.append({"sec_uid": sec_uid, "cid": cid, "text": text, "create_time": create_time,
-                                 "digg_count": digg_count, "user_digged": user_digged, "reply_comment_total": reply_comment_total,
-                                 "is_author_digged": is_author_digged, "is_hot": is_hot, "is_note_comment": is_note_comment})
+                                 "digg_count": digg_count, "user_digged": user_digged,
+                                 "reply_comment_total": reply_comment_total,
+                                 "is_author_digged": is_author_digged, "is_hot": is_hot,
+                                 "is_note_comment": is_note_comment})
         return comment_data
 
     @staticmethod
@@ -928,7 +963,8 @@ class Fetcher:
             is_hot = reply.get("is_hot", "")
             is_note_comment = reply.get("is_note_comment", "")
             reply_data.append({"sec_uid": sec_uid, "cid": cid, "text": text, "create_time": create_time,
-                               "digg_count": digg_count, "user_digged": user_digged, "is_author_digged": is_author_digged,
+                               "digg_count": digg_count, "user_digged": user_digged,
+                               "is_author_digged": is_author_digged,
                                "is_hot": is_hot, "is_note_comment": is_note_comment})
         return reply_data
 
@@ -991,7 +1027,8 @@ class Fetcher:
         }
 
     @staticmethod
-    def videoDataFormer(url: str, metadata: Dict[str, Any], comments: List[Dict[str, Any]], replies: List[List[Dict[str, Any]]], index: int = None) -> Dict[str, Any]:
+    def videoDataFormer(url: str, metadata: Dict[str, Any], comments: List[Dict[str, Any]],
+                        replies: List[List[Dict[str, Any]]], index: int = None) -> Dict[str, Any]:
         """
         Combine video metadata, comments, and replies into a single structured dictionary.
 
@@ -1125,7 +1162,8 @@ class Fetcher:
         return vidDataObj
 
     @staticmethod
-    def userDictFormer(sec_id: str, handler: Dict[str, Any], videoList: List[Dict[str, Any]], commentList: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def userDictFormer(sec_id: str, handler: Dict[str, Any], videoList: List[Dict[str, Any]],
+                       commentList: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Combine user metadata, video data, and comment data into a single structured dictionary.
 
@@ -1176,9 +1214,6 @@ class Fetcher:
             "comments": commentList
         }
         return userDataObj
-
-
-
 
     async def newDownload(self, video_url: str, index: int, path_to: str = None, path_strict: bool = False) -> str:
         """
@@ -1268,107 +1303,124 @@ class Fetcher:
         """
         Update existing user records in the database with new video and comment data.
 
+        This method iterates through a set of user identifiers (sec_uid) and for each user, it checks the
+        current videos and comments stored in the database. If a given video or comment is not already present,
+        the corresponding update method is called to add the new data.
+
         :param user_set: A set of user sec_uid values to update.
-        :param user_video_dict: A dictionary mapping user sec_uid to video data.
-        :param user_comment_dict: A dictionary mapping user sec_uid to comment data.
+        :param user_video_dict: A dictionary mapping each user sec_uid to a list of video data dictionaries.
+        :param user_comment_dict: A dictionary mapping each user sec_uid to a list of comment data dictionaries.
         :return: None
+        :raises ValueError: If a user with a given sec_uid is not found in the database.
         """
+        # Iterate over each user identifier in the provided set.
         for sec_uid in user_set:
-            # For each video linked to the user, update the user's video list in the database.
+            # Process video data for the current user.
             for video in user_video_dict[sec_uid]:
                 aweme_id = video["aweme_id"]
-                # Check if the video exists in the database using database methods.
+                # Retrieve the user's current video list from the database.
                 user_videos = self.db.search_users(["sec_uid"], [sec_uid])[0].get("videos", [])
+                # If user videos are found, check if the current video already exists.
                 if user_videos is not None:
                     if len(user_videos) > 0:
+                        # Loop through each video record for this user.
                         for user_video in user_videos:
+                            # If the video already exists (matching aweme_id), do nothing.
                             if user_video["aweme_id"] == aweme_id:
                                 break
                         else:
+                            # If no matching video is found, update the user's video list with the new video.
                             self.db.update_user_videos(sec_uid, aweme_id)
                     else:
+                        # If the video list is empty, update it with the new video.
                         self.db.update_user_videos(sec_uid, aweme_id)
                 else:
+                    # If no user record is found, raise an error.
                     raise ValueError(f"User {sec_uid} not found in database.")
-            # Similarly, update the user's comment list.
+
+            # Process comment data for the current user.
             for comment in user_comment_dict[sec_uid]:
                 aweme_id = comment["aweme_id"]
                 comment_id = comment["comment_id"]
-                # Check if the comment exists in the database using database methods.
+                # Retrieve the user's current comment list from the database.
                 user_comments = self.db.search_users(["sec_uid"], [sec_uid])[0].get("comments", [])
+                # Check if the comment list exists.
                 if user_comments is not None:
                     if len(user_comments) > 0:
+                        # Loop through each comment record for this user.
                         for user_comment in user_comments:
+                            # If the comment (both aweme_id and comment_id) already exists, do nothing.
                             if user_comment["aweme_id"] == aweme_id and user_comment["comment_id"] == comment_id:
                                 break
                         else:
+                            # If no matching comment is found, update the user's comment list with the new comment.
                             self.db.update_user_comments(sec_uid, aweme_id, comment_id)
                     else:
+                        # If the comment list is empty, update it with the new comment.
                         self.db.update_user_comments(sec_uid, aweme_id, comment_id)
                 else:
+                    # If no user record is found, raise an error.
                     raise ValueError(f"User {sec_uid} not found in database.")
-            
-    async def downloader(self, video_url: str, index: int, output_folder: str = None):
-        """
-        Download the video, ensuring the file is fully saved before finishing.
 
-        :param video_url: URL of the video to download.
-        :param index: An integer used to generate a filename.
-        :param output_folder: Directory to save the video file.
+    async def downloader(self, video_url: str, index: int, output_folder: str = None) -> str:
+        """
+        Download a video and verify that the file was saved successfully.
+
+        :param video_url: The URL of the video to download.
+        :param index: An integer used to generate a unique filename.
+        :param output_folder: Optional; the folder where the video file should be saved.
         :return: The full file path of the saved video.
+        :raises RuntimeError: If the file does not exist or has zero size after download.
         """
         if output_folder is None:
-            output_folder = downloadVideoPath(index) 
+            output_folder = downloadVideoPath(index)
         else:
             output_folder = downloadVideoPath(index, output_folder)
         os.makedirs(output_folder, exist_ok=True)
 
-        # Call the newDownload method to handle the download.
+        # Delegate to newDownload for the actual download process.
         file_path = await self.newDownload(video_url, index, output_folder, path_strict=True)
-        # Check if the file was downloaded successfully
+        # Check that the file was saved correctly.
         if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
             print(f"Downloaded video successfully: {video_url}")
         else:
             print(f"Failed to download video: {video_url}")
             raise RuntimeError(f"Failed to download video: {video_url}")
-
+        return file_path
 
     async def fetch(self, dl: bool = True, collect_replies: bool = True, collect_commenter_data: bool = True):
         """
-        Fetch video metadata, comments, and replies from the Douyin API.
-        :param dl:
-        :param collect_replies:
-        :param collect_commenter_data:
-        :return:
-        """
-        """# check if pickle exists for userSet, userVideoDict, userCommentDict if so load them, else create them
-        userPickleBasePath = "userInfoPickles"
-        userSetPickPath = os.path.join(userPickleBasePath, "userSet.pickle")
-        userVideoDictPickPath = os.path.join(userPickleBasePath, "userVideoDict.pickle")
-        userCommentDictPickPath = os.path.join(userPickleBasePath, "userCommentDict.pickle")"""
+         High-level function to fetch videos, metadata, comments, and user data from Douyin.
+
+         The method processes each video in the CSV file by:
+          - Optionally downloading the video.
+          - Fetching the unique aweme_id.
+          - Retrieving video metadata.
+          - Fetching comments and, if specified, their replies.
+          - Aggregating user data from both video authors and commenters.
+          - Saving the collected video data to the local database.
+          - Periodically pickling user data as a failsafe.
+
+
+         :param dl: If True, download the video files.
+         :param collect_replies: If True, fetch replies for each comment.
+         :param collect_commenter_data: If True, collect additional data for users who post comments.
+         :return: None
+         """
+        # Temporary paths for pickling user data as a backup.
         tempPickBasePath = "tempPickles"
         tempUserSetPickPath = os.path.join(tempPickBasePath, "tempUserSet.pickle")
         tempUserVideoDictPickPath = os.path.join(tempPickBasePath, "tempUserVideoDict.pickle")
         tempUserCommentDictPickPath = os.path.join(tempPickBasePath, "tempUserCommentDict.pickle")
 
-        """if os.path.exists(userSetPickPath) and os.path.exists(userVideoDictPickPath) and os.path.exists(userCommentDictPickPath):
-            userSet = pd.read_pickle(userSetPickPath)
-            userVideoDict = pd.read_pickle(userVideoDictPickPath)
-            userCommentDict = pd.read_pickle(userCommentDictPickPath)
-        else:
-            # Load data from database if pickles do not exist
-            userSet = set()
-            userVideoDict = {}
-            userCommentDict = {}"""
-
-        # Initialize user data structures
+        # Initialize data structures to store user-related data.
         userSet = set()
         userVideoDict = {}
         userCommentDict = {}
-        newUserSet = set()
-        usersToUpdate = set()
+        newUserSet = set()  # To track newly encountered users.
+        usersToUpdate = set()  # To track users that already exist in the database.
 
-        # Load user set from database
+        # Load existing users from the database.
         existing_users = self.db.get_all_users()
         for user in existing_users:
             sec_uid = user["sec_uid"]
@@ -1376,16 +1428,18 @@ class Fetcher:
             userVideoDict[sec_uid] = []
             userCommentDict[sec_uid] = []
 
-
         def userAdding(sec_uid: str, isAuthor: bool, awe_id: str, cid: str = None):
             """
-            Add the sec_uid to the userSet if it is not already present.
+            Add a user's sec_uid to the local user data structures.
 
-            :param sec_uid:
-            :param isAuthor:
-            :param awe_id:
-            :param cid:
-            :return:
+            If the user does not exist, initialize their video and comment lists. Otherwise, mark them for update.
+
+            :param sec_uid: The user's secondary ID.
+            :param isAuthor: True if the user is the video author; otherwise, False.
+            :param awe_id: The video identifier.
+            :param cid: Optional; the comment identifier, required for non-author entries.
+            :return: None
+            :raises ValueError: If a comment ID is missing for non-author entries.
             """
             if sec_uid not in userSet:
                 userSet.add(sec_uid)
@@ -1401,96 +1455,62 @@ class Fetcher:
                 else:
                     raise ValueError("Comment ID is required for non-author entries.")
 
-        # Check if processSucceded pickle exists, if so, load and check if True, if not load tempPickles and continue
-        """processSucceeded = False
-        processSucceededPath = "processSucceded.pickle"
-        if os.path.exists(processSucceededPath):
-            processSucceeded = pd.read_pickle(processSucceededPath)
-            if processSucceeded:
-                print("Process already succeeded, skipping.")
-                return
-            else:
-                if os.path.exists(tempUserSetPickPath) and os.path.exists(tempUserVideoDictPickPath) and os.path.exists(tempUserCommentDictPickPath):
-                    userSet = pd.read_pickle(tempUserSetPickPath)
-                    userVideoDict = pd.read_pickle(tempUserVideoDictPickPath)
-                    userCommentDict = pd.read_pickle(tempUserCommentDictPickPath)
-                else:
-                    raise ValueError("Process failed previously, but tempPickles are missing.")"""
-
         size_at_start = self.db.videoSize()
+        # Process each row from the CSV file.
         for index, row in self.df.iterrows():
             index: int = index
             index = int(index)
-            # Determine the current index for logging
-            current_index = self.db.videoSize()
+            current_index = self.db.videoSize()  # Use the current database size as the unique index.
             print(f"Processing video {current_index} of {len(self.df) + size_at_start} ({index}/{len(self.df)})")
             video_url = row['video_url']
             hashtags = row['hashtags']
             if dl:
-                # Download the video
+                # Download the video file if requested.
                 await self.downloader(video_url, current_index)
-            # Fetch the aweme_id
+            # Retrieve the video’s unique identifier.
             aweme_id = await self.fetch_aweme_id(video_url)
-            # Fetch the video metadata
+            # Fetch the video metadata and parse it.
             metadata = Fetcher.parseVideoMetadata(await self.fetchVideoMetadata(aweme_id))
             author_sec_uid = metadata["sec_uid"]
-            # add sec_uid to userSet
+            # Add the video author to the user data structures.
             userAdding(author_sec_uid, True, aweme_id)
-            # Fetch comment count
             comment_count = metadata["comment_count"]
-            # Fetch comments
+            # Fetch and parse the video comments.
             comments = Fetcher.parseCommentData(await self.fetchComments(aweme_id, comment_count))
             replyList = []
+            # Process each comment.
             for comment in comments:
                 sec_uid = comment["sec_uid"]
-                # fetch cid
                 cid = comment["cid"]
                 if collect_commenter_data:
-                    # add sec_uid to userSet
                     userAdding(sec_uid, False, aweme_id, cid)
-                # Fetch reply count if collect_replies is True
                 replies = []
                 if collect_replies:
                     reply_count = comment["reply_comment_total"]
-                    # print(f"Reply count: {reply_count}")
-                    # Fetch replies
                     replies = Fetcher.parseReplyData(await self.fetchCommentReplies(aweme_id, cid, reply_count))
                 replyList.append(replies)
-                # Fetch and store reply_sec_uid if collect_replies is True
                 if collect_replies:
                     for reply in replies:
                         rep_sec_uid = reply["sec_uid"]
                         userAdding(rep_sec_uid, False, aweme_id, cid)
-            # Form video data object
+            # Combine all video data into a single dictionary.
             video_data = self.videoDataFormer(video_url, metadata, comments, replyList, current_index)
-            # Save video data to the database
+            # Save the video data into the database.
             self.db.new_video(video_data, search_query=hashtags)
-            # make dirs for pickle files
             os.makedirs(tempPickBasePath, exist_ok=True)
-            # pickle userSet, userVideoDict, userCommentDict as failsafe in case of error
+            # Save the user data structures as pickle files for backup.
             pd.to_pickle(userSet, tempUserSetPickPath)
             pd.to_pickle(userVideoDict, tempUserVideoDictPickPath)
             pd.to_pickle(userCommentDict, tempUserCommentDictPickPath)
 
-        # Save user data to the database
+        # Insert new user data into the database.
         await self.composeUserData(newUserSet, userVideoDict, userCommentDict)
-        # Update existing user data in the database
+        # Update existing user data in the database.
         self.userDataUpdater(usersToUpdate, userVideoDict, userCommentDict)
 
-        """# If everything succeeded, store process status to pickle
-        processSucceeded = True
-        pd.to_pickle(processSucceeded, processSucceededPath)"""
+    # Example usage in an async main (for testing purposes):
 
 
-
-
-
-
-
-
-
-
-# Example usage in an async main
 async def main():
     fetcher = Fetcher("videos_trim_1.csv", "output_folder")
     urls = [
@@ -1507,6 +1527,7 @@ async def main():
             print(f"File saved to: {file_path}")
         except Exception as e:
             print(f"Failed to download video {url}: {e}")
+
 
 if __name__ == '__main__':
     # asyncio.run(main())
