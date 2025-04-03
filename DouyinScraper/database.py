@@ -1672,7 +1672,7 @@ if __name__ == "__main__":
     key_types = dab.get_data_key_type_dict("Videos")
     print(f"Video Table Key Types: {key_types}")
 
-    # test data_to_csv save to different folder
+    """# test data_to_csv save to different folder
     dab.data_to_csv("Videos", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")
     dab.data_to_csv("Users", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")
-    dab.data_to_csv("comments", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")
+    dab.data_to_csv("comments", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")"""
