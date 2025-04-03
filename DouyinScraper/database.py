@@ -1,3 +1,105 @@
+"""
+database.py
+===========
+
+Overview:
+---------
+This module defines a Database class along with several helper functions to manage a simple
+JSON-based database using TinyDB. It stores and queries video and user data, and even allows
+data export to CSV or Excel files. The design strives to hide complexity, making it approachable
+for users with very limited technical or computer science background.
+
+Purpose:
+--------
+The primary goal of this file is to provide an easy-to-use interface for storing, retrieving, and
+exporting video and user data. It is part of a larger program developed for a friend who is not
+very tech-savvy. The module abstracts many of the intricate details of database management so that
+the end user can perform operations without needing to understand the underlying code.
+
+Key Features:
+-------------
+- **Initialization and Persistence**: Automatically sets up a JSON database file in a designated
+  folder. If no path or file name is provided, it defaults to creating a "Database" folder and a file
+  named "db.json".
+- **Record Insertion**: Methods such as `new_video` and `new_user` allow for easy insertion of new
+  video and user records. Each record is assigned an index automatically.
+- **Record Retrieval**: Provides methods to retrieve individual records (`get_video`, `get_user`),
+  all records (`get_all_videos`, `get_all_users`), and even the total count of records.
+- **Record Updates**: Contains methods to update user records by appending video IDs and comment IDs,
+  ensuring that new data can be added to existing records without starting over.
+- **Query Construction**: Implements advanced query construction with support for logical operators
+  (AND/OR) and custom comparison functions. This includes handling nested dictionaries and converting
+  them into a flat structure for simpler querying.
+- **Data Export**: Offers functionality to export data from the database to CSV or Excel files. This
+  is particularly useful for sharing data with users who prefer viewing it in a familiar format.
+- **Utility Functions**: Helper functions like `flatten_dict`, `recursive_fetch`, and `parse_indices`
+  simplify operations on nested data structures, ensuring that even complex data can be handled in a
+  straightforward manner.
+
+Usage:
+------
+This module is intended to be simple enough for non-technical users while still offering flexibility
+and power under the hood. Here is an example of how to use it:
+
+    from database import Database
+
+    # Create a new Database instance. The database will be created in the default folder if none is specified.
+    db = Database()
+
+    # Insert a new video record with some sample metadata and a search query.
+    db.new_video(dataDump={"metadata": {"url": "http://example.com", "aweme_id": "12345", "sec_uid": "abcde",
+                                          "video_metadata": {"primary": {"item_title": "Sample Video",
+                                                                         "caption": "An example caption",
+                                                                         "desc": "This is an example description"},
+                                                             "basic_temporal": {"create_time": "2021-01-01", "duration": 120},
+                                                             "engagement": {"play_count": 1000, "digg_count": 100,
+                                                                            "comment_count": 50, "share_count": 10,
+                                                                            "admire_count": 5, "collect_count": 3},
+                                                             "additional": {"ocr_content": "Some OCR text"}}}},
+                 search_query="funny cats")
+
+    # Retrieve and display the number of videos stored.
+    print(f"Total videos: {db.videoSize()}")
+
+    # Export all video data to a CSV file.
+    db.create_video_data_csv(to_excel=False)
+
+Technical Details:
+------------------
+- **TinyDB Integration**: TinyDB is used for a lightweight, file-based database. This is ideal for
+  small projects and for users who do not require a full-fledged relational database.
+- **Nested Data Handling**: The module includes functions to flatten nested dictionaries, making
+  it easier to build queries and export data in a tabular format.
+- **Dynamic Querying**: Users can construct complex queries with logical combinations (AND/OR) and
+  even define custom comparison operators to suit their needs.
+- **Data Export**: The module leverages pandas for data export, ensuring that the output can be
+  easily handled in common tools like Microsoft Excel or any CSV viewer.
+
+Note to the User:
+-----------------
+This code is designed with simplicity and clarity in mind. It is extensively documented with inline
+comments and verbose docstrings so that even someone with very limited knowledge of programming can
+get an idea of how the system works. While there are advanced features built into the query construction,
+the interface is designed to be as straightforward as possible for everyday use.
+
+Author:
+-------
+Román Schiffino
+GitHub: https://github.com/schiffinor
+
+Date:
+-----
+2025-04-02
+
+Docstring Note:
+---------------
+I'm a wee bit lazy when it comes to docstrings, so this is ai-generated. But hey, it does the job, right?
+Similarly, the comments in the code have been fleshed out with ai, because I can't be bothered to write them all myself.
+Basically, AI took my fragmented comments and made something helpful to people who might not know what the code does.
+Just remember, if you find any typos or weird phrases, it's probably because I didn't proofread it. Cheers!
+Contact me regarding any issues or questions you might have.
+"""
+
 import csv
 import difflib
 import json
