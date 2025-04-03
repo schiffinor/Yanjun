@@ -1,19 +1,21 @@
-import pathlib
+import csv
 import difflib
+import json
+import os
+import pathlib
+import re
+from typing import List, Union, Dict, Callable, Any, Optional
+
+import pandas as pd
 from tinydb import TinyDB, Query
 from tinydb.operations import add
 from tinydb.queries import QueryLike
 from tinydb.table import Table as tdTab
-import json
-import os
-from And_Or import AND_OR as AO
+
 import Operands as Op
-from typing import  List, Union, Dict, Callable, Any, Optional
-from Operands import RelOperator
+from And_Or import AND_OR as AO
 from CommentTree import parseOpFunc
-import pandas as pd
-import csv
-import re
+from Operands import RelOperator
 
 OperatorTypes = Union[str, Op.RelOperator, Callable[[Any, Any], bool]]
 OperatorList = List[OperatorTypes]
@@ -29,7 +31,7 @@ def parseOpFuncList(opList: OperatorList, cast_type: bool = True) -> List[Callab
     :return: A list of binary operator functions.
     :raises TypeError: If any operator cannot be parsed or is not callable.
     """
-    parsed_ops = [] # Prepare a list to hold our freshly parsed operators.
+    parsed_ops = []  # Prepare a list to hold our freshly parsed operators.
     for op in opList:
         try:
             # Convert the operator definition into a callable function.
@@ -97,7 +99,7 @@ def get_data_keys(data: tdTab):
     :return: A list of keys from the flattened first record.
     :raises ValueError: If the table is empty or the first record is not a dictionary.
     """
-    dataList = data.all() # Get all records; we only need the first one.
+    dataList = data.all()  # Get all records; we only need the first one.
     if len(dataList) > 0:
         # Get the first element
         first_element = dataList[0]
@@ -127,21 +129,21 @@ def recursive_fetch(data: dict, var: str):
     v_components = var.split(".")
     output = data.get(v_components[0], None)
     if output is None:
-        return None # Top-level key not found; better to return nothing than crash.
+        return None  # Top-level key not found; better to return nothing than crash.
     if not isinstance(output, dict):
-        return output # If the first value isn't a dict, just return it.
+        return output  # If the first value isn't a dict, just return it.
     # Traverse deeper into the dictionary.
     for comp in v_components[1:]:
         output = output[comp]
         if output is None:
-            return None # Oops, key path breaks here.
+            return None  # Oops, key path breaks here.
         if not isinstance(output, dict):
             if isinstance(output, list):
                 # If we encounter a list, convert each element to a string for uniformity.
                 for i in range(len(output)):
                     output[i] = str(output[i])
                 output = str(output)
-            return output # Return the non-dictionary value as soon as it's reached.
+            return output  # Return the non-dictionary value as soon as it's reached.
     return output
 
 
@@ -194,7 +196,7 @@ class Database:
         if db_path is None:
             db_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.joinpath("Database")
         self.db_path = pathlib.Path(db_path)
-        os.makedirs(self.db_path, exist_ok=True) # Create directory if it doesn't exist.
+        os.makedirs(self.db_path, exist_ok=True)  # Create directory if it doesn't exist.
         # Set the database file name.
         if db_name is None:
             db_name = "db.json"
@@ -210,9 +212,9 @@ class Database:
         self.db = TinyDB(self.full_path, indent=4, encoding="utf-8", ensure_ascii=False)
         self.query = Query()
         if clear:
-            self.db.drop_tables() # Clear all tables if requested.
-        self.video_table = self.db.table("Videos") # Table for video records.
-        self.user_table = self.db.table("Users") # Table for user records.
+            self.db.drop_tables()  # Clear all tables if requested.
+        self.video_table = self.db.table("Videos")  # Table for video records.
+        self.user_table = self.db.table("Users")  # Table for user records.
 
     def new_video(self, dataDump: Dict[str, Any] = None, search_query: str = None):
         """
@@ -227,7 +229,6 @@ class Database:
         video_record = dataDump  # Data to be inserted.
         # Insert the new video record with its index and search query.
         self.video_table.insert({"index": index, **video_record, "search_query": search_query})
-
 
     def new_user(self, dataDump: Dict[str, Any] = None):
         """
@@ -374,7 +375,7 @@ class Database:
         # If provided as a string, clean it up and convert to a standardized AO constant.
         if isinstance(and_or, str):
             # accept both AND and OR as strings aswell as different capitalizations and any spacing differences, also parse "a" and "o" as AND and OR
-            and_or = and_or.strip().lower() # Remove leading/trailing whitespace and convert to lowercase.
+            and_or = and_or.strip().lower()  # Remove leading/trailing whitespace and convert to lowercase.
             if and_or in ["and", "a"]:
                 and_or = AO.AND
             elif and_or in ["or", "o"]:
@@ -397,7 +398,7 @@ class Database:
         #    - Validate that it is a proper identifier.
         #    - Attempt to resolve the full variable path using several mappings.
         for var in variables:
-            varParsed = False # A flag to indicate if the variable has been successfully parsed/resolved.
+            varParsed = False  # A flag to indicate if the variable has been successfully parsed/resolved.
 
             # Clean up the variable name: trim whitespace, replace problematic characters with underscores.
             var = var.strip().replace(" ", "_").replace("-", "_").replace(":", "_").replace(";", "_").replace(",", "_")
@@ -587,11 +588,13 @@ class Database:
             # Count how many query placeholders (q) are present in the logic string.
             query_count = complex_logic.count("q")
             if query_count != len(var_parse):
-                raise ValueError(f"complex_logic must contain as many 'q's as there are variables. {query_count} != {len(var_parse)}")
+                raise ValueError(
+                    f"complex_logic must contain as many 'q's as there are variables. {query_count} != {len(var_parse)}")
             # Ensure each placeholder is wrapped in its own set of parentheses.
             matches = re.findall(r"\(q\)", complex_logic)
             if len(matches) != query_count:
-                raise ValueError(f"Each 'q' must be wrapped in parentheses; found {len(matches)} instead of {query_count}.")
+                raise ValueError(
+                    f"Each 'q' must be wrapped in parentheses; found {len(matches)} instead of {query_count}.")
             # Replace each occurrence of "(q)" with uniquely numbered placeholders "(q1)", "(q2)", etc.
             for i in range(query_count):
                 complex_logic = complex_logic.replace("(q)", f"(q{i + 1})", 1)
@@ -1199,7 +1202,8 @@ class Database:
         :param complex_logic: Optional string for complex condition logic.
         :return: A list of video records that match the query.
         """
-        return self.search(self.video_table, self.query, variables, values, and_or, operatorCode, cast_data, complex_logic)
+        return self.search(self.video_table, self.query, variables, values, and_or, operatorCode, cast_data,
+                           complex_logic)
 
     def search_users(self,
                      variables: str | List[str],
@@ -1218,7 +1222,8 @@ class Database:
         :param complex_logic:
         :return:
         """
-        return self.search(self.user_table, self.query, variables, values, and_or, operatorCode, cast_data, complex_logic)
+        return self.search(self.user_table, self.query, variables, values, and_or, operatorCode, cast_data,
+                           complex_logic)
 
     def create_video_data_csv(self, to_excel: bool = False):
         """

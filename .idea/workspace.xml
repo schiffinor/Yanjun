@@ -7,21 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="pretty complete">
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/And_Or.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/DouyinScraper/videos_trim_3.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/CommentTree.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/CommentTree.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/DouScrape.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/DouScrape.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/composeUserDataFromPickle.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/composeUserDataFromPickle.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/cookieGetter.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/cookieGetter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/dataFixer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/dataFixer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/inverseDataFixer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/inverseDataFixer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/scraperTest.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/scraperTest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/userDataFixer.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/userDataFixer.py" afterDir="false" />
-    </list>
+    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="database.py file completed" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -188,7 +174,7 @@
       <workItem from="1743027300291" duration="1037000" />
       <workItem from="1743029183536" duration="46882000" />
       <workItem from="1743464150723" duration="33251000" />
-      <workItem from="1743581779362" duration="29859000" />
+      <workItem from="1743581779362" duration="30217000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -222,7 +208,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743373442801</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="database.py file completed">
+      <option name="closed" value="true" />
+      <created>1743650023821</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1743650023821</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -243,7 +237,8 @@
     <MESSAGE value="1th step" />
     <MESSAGE value="Complete implementation of CommentTree.py" />
     <MESSAGE value="pretty complete" />
-    <option name="LAST_COMMIT_MESSAGE" value="pretty complete" />
+    <MESSAGE value="database.py file completed" />
+    <option name="LAST_COMMIT_MESSAGE" value="database.py file completed" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
