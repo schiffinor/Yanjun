@@ -7,8 +7,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="DouScrape.py is now done">
-      <change beforePath="$PROJECT_DIR$/DouyinScraper/ping.wav" beforeDir="false" />
+    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="cleanup">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -176,7 +177,7 @@
       <workItem from="1743027300291" duration="1037000" />
       <workItem from="1743029183536" duration="46882000" />
       <workItem from="1743464150723" duration="33251000" />
-      <workItem from="1743581779362" duration="36464000" />
+      <workItem from="1743581779362" duration="38699000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -266,7 +267,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743656280050</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="cleanup">
+      <option name="closed" value="true" />
+      <created>1743656422349</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1743656422349</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -291,7 +300,8 @@
     <MESSAGE value="working on FileFetcher.py" />
     <MESSAGE value="FileFetcher.py is now done" />
     <MESSAGE value="DouScrape.py is now done" />
-    <option name="LAST_COMMIT_MESSAGE" value="DouScrape.py is now done" />
+    <MESSAGE value="cleanup" />
+    <option name="LAST_COMMIT_MESSAGE" value="cleanup" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

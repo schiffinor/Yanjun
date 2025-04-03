@@ -791,15 +791,7 @@ class Fetcher:
             requestURL = self.urlFromEndpoint(endpoint)
             # If commentCount is -1, determine it from video metadata.
             if commentCount == -1:
-                video_data = await self.fetchVideoMetadata(aweme_id)
-                if video_data is None:
-                    wn.warn("Failed to fetch video metadata; returning empty comments.")
-                    return {"comments": []}
-                try:
-                    commentCount = video_data["aweme_detail"]["statistics"]["comment_count"]
-                except KeyError as e:
-                    wn.warn(f"Error parsing comment count: {e}. Returning empty comments.")
-                    return {"comments": []}
+                commentCount = 50
             # If there are no comments, return an empty list.
             if commentCount == 0:
                 return {"comments": []}
@@ -1475,6 +1467,9 @@ class Fetcher:
             # Add the video author to the user data structures.
             userAdding(author_sec_uid, True, aweme_id)
             comment_count = metadata["comment_count"]
+            # I found that Douyin API limits the comment count to 50, so we set a cap.
+            if comment_count > 50:
+                comment_count = 50
             # Fetch and parse the video comments.
             comments = Fetcher.parseCommentData(await self.fetchComments(aweme_id, comment_count))
             replyList = []
