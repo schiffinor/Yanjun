@@ -7,7 +7,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="database.py file completed" />
+    <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="database.py file completed">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -174,7 +177,7 @@
       <workItem from="1743027300291" duration="1037000" />
       <workItem from="1743029183536" duration="46882000" />
       <workItem from="1743464150723" duration="33251000" />
-      <workItem from="1743581779362" duration="30217000" />
+      <workItem from="1743581779362" duration="34359000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -216,7 +219,31 @@
       <option name="project" value="LOCAL" />
       <updated>1743650023821</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="database.py file completed">
+      <option name="closed" value="true" />
+      <created>1743650083635</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1743650083635</updated>
+    </task>
+    <task id="LOCAL-00007" summary="database.py file completed">
+      <option name="closed" value="true" />
+      <created>1743650150556</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1743650150556</updated>
+    </task>
+    <task id="LOCAL-00008" summary="database.py file completed">
+      <option name="closed" value="true" />
+      <created>1743650804251</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1743650804251</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -248,7 +275,7 @@
     <SUITE FILE_PATH="coverage/Yanjun$CommentTree.coverage" NAME="CommentTree Coverage Results" MODIFIED="1742859653220" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$quickopfetch.coverage" NAME="quickopfetch Coverage Results" MODIFIED="1743570281686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$dbtest.coverage" NAME="dbtest Coverage Results" MODIFIED="1743207642371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1743645081410" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1743650124249" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$testSound.coverage" NAME="testSound Coverage Results" MODIFIED="1742077862104" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$DouScrape.coverage" NAME="DouScrape Coverage Results" MODIFIED="1742254434337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$scraperTest.coverage" NAME="scraperTest Coverage Results" MODIFIED="1742874996771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />

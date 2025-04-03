@@ -1,14 +1,116 @@
 """
-This python file will take a path to a csv file with a list of douyin video urls and download the videos to the specified folder.
-The first column of the csv is hashtags and the second column is the video url, rest is irrelevant.
+douyin_video_fetcher.py
+=======================
 
-In one pass this script will:
-- Download the videos
-- Extract the metadata
-- Save the metadata to a csv file
-- Save the video to the specified folder
-- Extract all the comments from the video
+Overview:
+---------
+This module is designed to process a CSV file containing Douyin video URLs and associated hashtags,
+download the corresponding videos, extract metadata and comments, and then export the gathered data
+into user-friendly formats such as CSV or Excel files. In essence, it automates the entire process of
+fetching video content and related data from Douyin, making it accessible even for users with very
+limited technical or computer science background.
+
+Purpose:
+--------
+The primary goal of this file is to simplify the task of retrieving Douyin video data. It reads a CSV
+file where the first column contains hashtags and the second column holds video URLs. For each video,
+the script performs the following actions:
+  - Downloads the video file.
+  - Extracts video metadata (e.g., title, description, play count, etc.).
+  - Extracts comments and any associated replies.
+  - Saves the metadata into a CSV or Excel file.
+  - Organizes the downloaded video files into a specified folder.
+
+By automating these steps, the module helps non-technical users gather and analyze video data with minimal
+manual intervention.
+
+Key Features:
+-------------
+- **CSV Input Handling**: Reads a CSV file with video URLs and hashtags, ignoring any irrelevant columns.
+- **Asynchronous Networking**: Utilizes asynchronous HTTP requests (with the httpx library) for
+  efficient network communication and robust error handling, ensuring smooth downloads even on slow
+  connections.
+- **Docker Integration**: Interfaces with Docker to check container logs and restart the container if
+  necessary. This helps in maintaining a reliable connection with the Douyin API.
+- **Retry Mechanisms**: Implements sophisticated retry logic with exponential backoff for both video
+  download requests and API GET requests, ensuring that transient network issues do not interrupt the
+  overall process.
+- **Data Parsing and Transformation**: Provides helper functions to parse video metadata, comments,
+  and replies into structured dictionaries. These data structures are then used to create unified objects
+  for videos and users.
+- **File Path Management**: Contains utility functions (such as `basePather` and `downloadVideoPath`)
+  that dynamically generate file paths based on the current timestamp or index, making it easy to organize
+  downloaded files.
+- **Data Export**: Uses pandas to compile metadata into DataFrames and export them as CSV or Excel files,
+  making the output easy to view and share.
+- **User Data Aggregation**: Aggregates user-related data (videos and comments) and updates the local
+  database accordingly, ensuring that user records are kept up-to-date.
+
+Usage:
+------
+A typical workflow using this module might look like this:
+1. Instantiate a `Fetcher` object by providing the path to a CSV file and an output folder.
+2. Call the asynchronous `fetch` method to process all videos listed in the CSV.
+3. The module will download videos, fetch their metadata, extract comments and replies, and update
+   the local database.
+4. Optionally, export metadata to CSV/Excel files for further analysis.
+
+Example:
+    import asyncio
+    from douyin_video_fetcher import Fetcher
+
+    async def main():
+        # Create a Fetcher instance with the CSV file and desired output folder.
+        fetcher = Fetcher("videos_trim_1.csv", "output_folder")
+        # Begin processing the videos (download, fetch metadata, comments, etc.).
+        await fetcher.fetch(dl=True, collect_replies=True, collect_commenter_data=True)
+
+    asyncio.run(main())
+
+Dependencies:
+-------------
+This module leverages several external libraries and modules:
+  - **httpx**: For making asynchronous HTTP requests.
+  - **asyncio**: To manage asynchronous operations.
+  - **aiofiles**: For asynchronous file I/O operations.
+  - **pandas**: For data manipulation and exporting data to CSV/Excel.
+  - **docker**: To interact with Docker containers (used for monitoring and restarting the Douyin API container).
+  - **requests**: For synchronous HTTP requests (used in some helper functions).
+  - **yaml**: For reading and writing YAML configuration files.
+  - **shutil, pathlib, os, re, time, io**: For various file system operations, regular expressions, and utility functions.
+  - **database**: A local module that handles the JSON database using TinyDB.
+
+Technical Details:
+------------------
+- The module is structured with multiple helper functions for file path management, Docker client interaction,
+  and robust network request handling (including retries and timeouts).
+- Asynchronous functions such as `fetch_ttwid`, `fetchVideoMetadata`, `fetchComments`, and others are used to
+  retrieve data from the Douyin API reliably.
+- The `Fetcher` class encapsulates the entire workflow, from reading the input CSV file and downloading videos
+  to parsing complex data structures (metadata, comments, replies) and updating the local database.
+- Extensive error handling is in place, including checking Docker container logs for errors and automatically
+  restarting the container when necessary.
+- The code is written to be verbose in logging and comments, ensuring that even users with limited CS knowledge
+  can follow along and understand what each part of the program is doing.
+
+Docstring Note:
+---------------
+I'm a wee bit lazy when it comes to docstrings, so this is AI-generated. But hey, it does the job, right?
+Similarly, the comments in the code have been fleshed out with AI, because I can't be bothered to write them all myself.
+Basically, AI took my fragmented comments and made something helpful to people who might not know what the code does.
+Just remember, if you find any typos or weird phrases, it's probably because I didn't proofread it. Cheers!
+Contact me regarding any issues or questions you might have.
+
+Author:
+-------
+Román Schiffino
+GitHub: https://github.com/schiffinor
+
+Date:
+-----
+2025-04-02
 """
+
 import io
 import httpx
 import asyncio
@@ -31,77 +133,111 @@ import pathlib
 
 
 def basePather(basePath: str = None):
+    """
+    Generate a base directory path for saving video data.
+
+    If no base path is provided, this function creates a new path string that includes the current
+    date and time (with spaces and colons replaced for file system compatibility). Otherwise, it simply
+    returns the given basePath.
+
+    :param basePath: Optional; the directory path provided by the user.
+    :return: A string representing the base directory path.
+    """
+    # If no path is provided, generate one using the current timestamp.
     if basePath is None:
+    # Create a folder name based on the current date and time.
+    # Note: This replaces spaces, colons, and periods with characters safe for file names.
         basePath = f"videoData\\{(str(dt.now()).replace(" ","_").replace(":", "-").replace(".", "_"))}\\"
         return basePath
     else:
+        # If a base path is provided, return it unchanged.
         return basePath
     
 def downloadVideoPath(index: int, basePath: str = None) -> str:
     """
-    This function takes an index and a base path and returns the path to the video file.
-    :param index: The index of the video.
-    :param basePath: The base path to the video folder.
-    :return: The path to the video file.
+    Construct a file path for a video file based on an index and an optional base path.
+
+    :param index: The index of the video, used to uniquely name the video file.
+    :param basePath: Optional; the base directory where the video should be stored.
+    :return: A string representing the full path to the video file.
     """
+    # If no base path is provided, set a default path using the Database folder.
     if basePath is None:
+        # Determine the default database directory (one level up from this file's directory).
         db_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.joinpath("Database")
-        os.makedirs(db_path, exist_ok=True)
-        return f"{basePath}\\Videos\\{index}.mp4"
+        os.makedirs(db_path, exist_ok=True)  # Ensure the directory exists.
+        # We then return a path string constructed with the index and default video file name.
+        return str(db_path.joinpath("Videos").joinpath(f"{index}.mp4"))
     else:
+        # When a base path is provided, build the path by appending the video file name.
         return f"{basePath}\\Videos\\{index}.mp4"
+
 
 def get_docker_client():
     """
-    Get the Docker client.
+    Obtain a Docker client object to interact with Docker on the host machine.
 
-    :return: Docker client instance.
+    :return: A Docker client instance if successful; otherwise, None.
     """
     try:
+        # Attempt to get a Docker client from the environment.
         client = docker.from_env()
         return client
     except Exception as e:
+        # Print the error if Docker is not reachable.
         print("Error connecting to Docker:", e)
         return None
 
 def get_container_by_name(container_name: str):
     """
-    Get a Docker container by its name.
+    Retrieve a Docker container object based on its name.
 
-    :param container_name: Name of the container to find.
-    :return: Docker container instance or None if not found.
+    :param container_name: The name of the Docker container.
+    :return: The Docker container instance if found; otherwise, None.
     """
+    # First, get the Docker client.
     client = get_docker_client()
     if client is None:
         return None
     try:
+        # Attempt to get the container by name.
         container = client.containers.get(container_name)
         return container
     except de.NotFound:
+        # If the container isn't found, notify the user.
         print(f"Container '{container_name}' not found.")
         return None
 
 def get_docker_logs(container_name: str, since: int = None) -> str:
+    """
+    Retrieve the logs from a Docker container, optionally filtering logs by a timestamp.
+
+    :param container_name: The name of the container to fetch logs from.
+    :param since: Optional; a Unix timestamp to filter logs.
+    :return: A string containing the Docker logs.
+    """
     logs = ""
     try:
+        # Get the container object.
         container = get_container_by_name(container_name)
-        # Get logs (decode from bytes to string)
+        # Retrieve and decode the logs from bytes to a UTF-8 string.
         logs = container.logs(since=since).decode("utf-8")
         return logs
     except Exception as e:
+        # Print any error encountered during log retrieval.
         print("Error checking Docker logs:", e)
         return logs
 
 def check_docker_logs(container_name: str, since: int = None, tail: int  = None) -> bool:
     """
-    Check the Docker logs of the specified container for error patterns.
+    Check the Docker logs for specific error patterns to determine if there is a problem.
 
-    :param container_name: Name or ID of the container running the API.
-    :param since: Optional Unix timestamp to filter logs.
-    :param tail: Optional number of lines to read from the end of the logs.
-    :return: True if an error pattern is detected, otherwise False.
+    :param container_name: The name or ID of the container to check.
+    :param since: Optional; Unix timestamp to start checking logs from.
+    :param tail: Optional; the number of lines from the end of the logs to check.
+    :return: True if any error pattern is found; otherwise, False.
     """
-
+    # Define a list of error patterns to look for in the logs.
     error_patterns = [
         "500: An error occurred while fetching data",
         "peer closed connection",
@@ -112,14 +248,16 @@ def check_docker_logs(container_name: str, since: int = None, tail: int  = None)
         "程序出现异常，请检查错误信息。",
         "ERROR    无效响应类型。响应类型: <class 'NoneType'>"
     ]
+    # Delegate to the helper function that checks logs for given error patterns.
     return check_docker_logs_for_errorPattern(error_patterns, since=since, tail=tail)
 
 def check_docker_logs_for_ttwid_update_error():
     """
-    Check the Docker logs for errors related to ttwid update.
+    Check Docker logs specifically for errors related to ttwid update issues.
 
-    :return: True if an error pattern is detected, otherwise False.
+    :return: True if an error pattern related to ttwid update is detected; otherwise, False.
     """
+    # Define error patterns specific to ttwid update errors.
     error_patterns = [
         "WARNING  第 1 次响应内容为空, 状态码: 200,"
         "WARNING  第 2 次响应内容为空, 状态码: 200,",
@@ -131,10 +269,11 @@ def check_docker_logs_for_ttwid_update_error():
 
 def check_docker_logs_for_ttwid_update_error2():
     """
-    Check the Docker logs for errors related to ttwid update.
+    Check Docker logs for ttwid update errors with a different tail length for log retrieval.
 
-    :return: True if an error pattern is detected, otherwise False.
+    :return: True if an error pattern is detected; otherwise, False.
     """
+    # This variant checks the last 25 lines of logs.
     error_patterns = [
         "WARNING  第 1 次响应内容为空, 状态码: 200,"
         "WARNING  第 2 次响应内容为空, 状态码: 200,",
@@ -146,112 +285,125 @@ def check_docker_logs_for_ttwid_update_error2():
 
 def check_docker_logs_strict():
     """
-    Check the Docker logs for errors related to ttwid update.
+    Strictly check Docker logs for critical ttwid update errors.
 
-    :return: True if an error pattern is detected, otherwise False.
+    :return: True if critical error patterns are found; otherwise, False.
     """
+    # This function looks for a set of very specific error messages.
     error_patterns = [
-        "WARNING  第 1 次响应内容为空, 状态码: 200,"
+        "WARNING  第 1 次响应内容为空, 状态码: 200,",
         "WARNING  第 2 次响应内容为空, 状态码: 200,",
         "WARNING  第 3 次响应内容为空, 状态码: 200,",
         "ERROR    无效响应类型。响应类型: <class 'NoneType'>",
         "<class 'NoneType'>"
     ]
     return check_docker_logs_for_errorPattern(error_patterns, since=None, tail=25)
-    
+
 def check_docker_logs_for_errorPattern(errorPattern: List[str], since: int = None, tail: int = None) -> bool:
     """
-    Check the Docker logs for errors related to errorPattern.
+    Check Docker logs for any occurrence of the specified error patterns.
 
-    :return: True if an error pattern is detected, otherwise False.
+    :param errorPattern: A list of strings representing error patterns to search for in the logs.
+    :param since: Optional; Unix timestamp to filter logs.
+    :param tail: Optional; number of lines from the end of the logs to consider.
+    :return: True if any of the error patterns is found; otherwise, False.
     """
     try:
-        container_name = "douyin_tiktok_api"  # Update to your container's name
+        # The container name is hardcoded here; update as needed.
+        container_name = "douyin_tiktok_api"
         container = get_container_by_name(container_name)
+        # Retrieve and decode the logs.
         logs = container.logs(since=since, tail=tail).decode("utf-8")
-        error_patterns = errorPattern
-        for pattern in error_patterns:
+        # Loop through each error pattern and check if it is present in the logs.
+        for pattern in errorPattern:
             if pattern in logs:
                 print(f"Detected ttwid update error in Docker logs: {pattern}")
                 return True
         return False
     except Exception as e:
+        # If an error occurs while checking logs, print the error and return False.
         print("Error checking Docker logs:", e)
         return False
 
 async def fetch_ttwid():
     """
-    Fetch the ttwid value from the douyin api.
-    :return:
+    Asynchronously fetch the ttwid value from the Douyin API.
+
+    :return: The ttwid value extracted from the API response.
     """
     async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
+        # Define the API endpoint for generating ttwid.
         requestURL = "http://localhost/api/douyin/web/generate_ttwid"
+        # Use the get_with_retry helper to fetch the response.
         response = await get_with_retry(client, requestURL, params={})
+        # Extract and return the ttwid from the response data.
         return Fetcher.dataFromResponse(response)["ttwid"]
 
 async def fetch_s_v_web_id():
     """
-    Fetch the s_v_web_id value from the douyin api.
-    :return:
+    Asynchronously fetch the s_v_web_id value from the Douyin API.
+
+    :return: The s_v_web_id value extracted from the API response.
     """
     async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
         requestURL = "http://localhost/api/douyin/web/generate_s_v_web_id"
         response = await get_with_retry(client, requestURL, params={})
         return Fetcher.dataFromResponse(response)["s_v_web_id"]
 
-async def docker_restart(client: httpx.AsyncClient, request_url: str, params: dict,
-                         max_retries: int = 5, delay: int = 5, backoff_factor: float = 2.0, restarts: int = 0, since: int = None) -> Optional[ httpx.Response]:
+async def docker_restart(client: httpx.AsyncClient,
+                         request_url: str,
+                         params: dict,
+                         max_retries: int = 5,
+                         delay: int = 5,
+                         backoff_factor: float = 2.0,
+                         restarts: int = 0,
+                         since: int = None) -> Optional[ httpx.Response]:
     """
-    Restart the Docker container if an error is detected in the logs.
+    Restart the Docker container if errors are detected in its logs, then reattempt the API request.
 
-    :param client: httpx.AsyncClient instance.
-    :param request_url: URL of the API endpoint to check.
-    :param params: Parameters to send with the request.
-    :param max_retries: Maximum number of retries for the request.
-    :param delay: Initial delay between retries.
-    :param backoff_factor: Factor by which to increase the delay after each retry.
-    :param restarts: Number of times the container has been restarted.
-    :param since: Optional Unix timestamp to filter logs.
-    :return:
+    :param client: An instance of httpx.AsyncClient used for making API requests.
+    :param request_url: The URL of the API endpoint to retry.
+    :param params: Dictionary of parameters to send with the API request.
+    :param max_retries: The maximum number of retries allowed.
+    :param delay: The initial delay between retries (in seconds).
+    :param backoff_factor: The factor by which the delay increases after each retry.
+    :param restarts: The current count of container restarts.
+    :param since: Optional; a Unix timestamp to filter the Docker logs.
+    :return: An httpx.Response object if the API request eventually succeeds.
     """
-    container_name = "douyin_tiktok_api"  # Update to your container's name
+    container_name = "douyin_tiktok_api"  # This is the container we monitor.
     sinceTimestamp = since
     try:
+        # Retrieve Docker logs since the specified timestamp.
         dLogs = get_docker_logs(container_name, since=sinceTimestamp)
-        # print last line of logs
+        # Print the last line of the logs to help diagnose the issue.
         print(dLogs.splitlines()[-1])
+        # If error patterns are found, proceed to restart the container.
         if check_docker_logs(container_name, since=sinceTimestamp) or (check_docker_logs_for_ttwid_update_error2()):
             print("Error detected in Docker logs. \nCheck if error is of type: \nERROR    无效响应类型。响应类型: <class 'NoneType'>")
             if check_docker_logs_for_ttwid_update_error2():
-                # We need to generate new ttwid, and s_v_web_id, then update container/app/crawlers/douyin/web/config.yaml with new values
-                print("Detected \"ERROR    无效响应类型。响应类型: <class 'NoneType'>\" in Docker logs.")
-                print("Initiating update, and restart of the container.")
+                print("Detected specific ttwid update error in Docker logs.")
+                print("Initiating update and restart of the container.")
                 container = get_container_by_name(container_name)
-                # Get "/app/crawlers/douyin/web/config.yaml" file from the container
                 config_file_path = "/app/crawlers/douyin/web/config.yaml"
-                # get file from docker container as tar archive
+                # Retrieve the config file as a tar archive from the container.
                 docker_file_stream, stat = container.get_archive(config_file_path)
-                # Create a dedicated directory to save the file
                 os.makedirs("docker_config_tar", exist_ok=True)
-                # Save the file to the local filesystem
                 with open("docker_config_tar/config.tar", "wb") as f:
                     for chunk in docker_file_stream:
                         f.write(chunk)
-                # unpack the tar file
+                # Unpack the tar archive to access the config.yaml file.
                 shutil.unpack_archive("docker_config_tar/config.tar", "docker_config", "tar")
-                # Now we need to update the config.yaml file with new ttwid, and s_v_web_id
-                with open("docker_config/config.yaml", "r",encoding="utf-8") as f:
+                # Open and read the configuration file.
+                with open("docker_config/config.yaml", "r", encoding="utf-8") as f:
                     print("Reading config.yaml file...")
                     yamlLoad = yaml.safe_load(f)
-                # Update the config with new ttwid, and s_v_web_id both values are stored on a single line:
-                # "      Cookie: ttwid=1%7CJssbjvuUQM1BPJKFN3PNh5ej0gUiBjrNc83Zw8a2R_c%7C1743198163%7Cced07d156fd017cb6d3c9a28187298548179fcf743301b83dcdc8f2f7187e0cd; UIFID_TEMP=209b86ca33829c7d9c7b7c40c5eb89f829cca190227d7391efa903940cb34a3cb2eaee5fa34ca946d1c974997d1e93692b87442ccb9f686a2e8aca8d4aa4cb501b43b3210207779c39feed0d37c6a1bb; hevc_supported=true; IsDouyinActive=true; home_can_add_dy_2_desktop=%220%22; dy_swidth=4096; dy_sheight=1152; stream_recommend_feed_params=%22%7B%5C%22cookie_enabled%5C%22%3Atrue%2C%5C%22screen_width%5C%22%3A4096%2C%5C%22screen_height%5C%22%3A1152%2C%5C%22browser_online%5C%22%3Atrue%2C%5C%22cpu_core_num%5C%22%3A16%2C%5C%22device_memory%5C%22%3A0%2C%5C%22downlink%5C%22%3A%5C%22%5C%22%2C%5C%22effective_type%5C%22%3A%5C%22%5C%22%2C%5C%22round_trip_time%5C%22%3A0%7D%22; volume_info=%7B%22isUserMute%22%3Atrue%2C%22isMute%22%3Atrue%2C%22volume%22%3A0.5%7D; stream_player_status_params=%22%7B%5C%22is_auto_play%5C%22%3A0%2C%5C%22is_full_screen%5C%22%3A0%2C%5C%22is_full_webscreen%5C%22%3A0%2C%5C%22is_mute%5C%22%3A1%2C%5C%22is_speed%5C%22%3A1%2C%5C%22is_visible%5C%22%3A1%7D%22; xgplayer_user_id=889208878171; fpk1=U2FsdGVkX1+pANPboYSOHYx0HudreojO8elUNxGbPOYJXkqcxSrSF1ld+iNZNPr3WZ9oQm7SEuBwB/uq9WD4SA==; fpk2=b0fc1a0934e7ea864f39ca0a0b863cfa; s_v_web_id=verify_m8tb8e26_xBk6z0gS_FCyn_4JUK_9S4S_sLzVrxgypowe; FORCE_LOGIN=%7B%22videoConsumedRemainSeconds%22%3A180%2C%22isForcePopClose%22%3A1%7D; passport_csrf_token=ac6461520516e67114ba9f2ef8a16060; passport_csrf_token_default=ac6461520516e67114ba9f2ef8a16060; __security_mc_1_s_sdk_crypt_sdk=ef677104-4e9d-aeb5; __security_mc_1_s_sdk_cert_key=aa542711-47ad-bc81; __security_mc_1_s_sdk_sign_data_key_web_protect=345a6279-4b89-814c; bd_ticket_guard_client_web_domain=2; UIFID=209b86ca33829c7d9c7b7c40c5eb89f829cca190227d7391efa903940cb34a3c3123432fde60cbaf0f05fd441cf18cf4d698ce7d3ab61ce5e0baf2c01481b5da70865d7467d7a5b41cb2050f82802767248bdfc243d90cf70c917effa07a322eddf302995a1e82e0c7984beb29c770e554777406bc89b3556a72c512e807f63115f2fb33eb5e2b28eae764f4a5b05f14c4ff4bb869501bc9907daef3bc3f24d8; __security_mc_1_s_sdk_sign_data_key_sso=913ec76f-41f4-8f67; odin_tt=e8e2dc8d10a064126c77fffb728b4dc87a5a11a3d067b4ee82af74f7f4cde41737ac2d07924525ffb03fccd80e618a652379b1daca460a8aaa922cf4386587c5b0f43a660dc223ddaaedea6a34f8526f; is_dash_user=1; SEARCH_RESULT_LIST_TYPE=%22single%22; WallpaperGuide=%7B%22showTime%22%3A1742070635298%2C%22closeTime%22%3A0%2C%22showCount%22%3A3%2C%22cursor1%22%3A47%2C%22cursor2%22%3A14%7D; strategyABtestKey=%221742070308.114%22; device_web_cpu_core=16; architecture=amd64; xg_device_score=7.501291248034187; douyin.com; device_web_memory_size=-1; csrf_session_id=e404af928480f0832e8d7ec8b2e250fa; biz_trace_id=b845cd9c; x-web-secsdk-uid=38327e99-2ba4-45f6-b9cf-6b4268aed836; __ac_nonce=067d5e221003aa2a1ceb1; __ac_signature=_02B4Z6wo00f01uX8RGQAAIDAXFPy7CsVSvrlzEDAAN6475; sdk_source_info=7e276470716a68645a606960273f276364697660272927676c715a6d6069756077273f276364697660272927666d776a68605a607d71606b766c6a6b5a7666776c7571273f275e58272927666a6b766a69605a696c6061273f27636469766027292762696a6764695a7364776c6467696076273f275e5827292771273f2735363037343635323537313234272927676c715a75776a716a666a69273f2763646976602778; bit_env=MTRjoBA90rhhNuVeuDF-FcaJe866A-g1QTyDOVi-AXoN4g8tjAmaHxzqXYtZoFl4d78qVN1mcbHzRbo-B30tDdL-iYB5pQHk6ICa4983L5pVS28kSbfSyENII5dsYUrof2QPrYYoCmw1VwSAf1J3dPTQv6FRIxw8QQ3AK2XtuBHwRwf6BNeSJh9Mk263Gl3mlc9u3DiKijTMmmqN-huniqXsiWLvEGyMnY39hz4bZyVUtKWB-qrCOt8qGTt6kpWCbgWLK2g3UXPA-e41JxOURI0q1yKzKNUvKNj24V-S0x1iFcUMXe89_DjmO5NE8x4dsLe2lsiBHMSxyA6R3AaY-ar1jygPF9_mZume4_GcybW8RvbxxXmxct4w0AMKnWZvRdh-BaDpKwjUtxC1kRA8mpsbgvXVFtgEqYwlGpMur-kUlmzGAhorvFSogC-AweMf3nZdcFnPZkg_rNjXkw7ihA%3D%3D; gulu_source_res=eyJwX2luIjoiM2Y3NGJhZDgxMzc3OThkNmVkN2U5ZjM3NDMzNGJkYjMwNzRhYjI0ZWJhMDZkMzdmYWNiNjgzNTY2ZjY0OGUyNCJ9; passport_auth_mix_state=zh8k3stgvoy8xkqxrm40scbxu5xmtz1eq8rckznvdlmb8uy9; download_guide=%222%2F20250315%2F0%22; bd_ticket_guard_client_data=eyJiZC10aWNrZXQtZ3VhcmQtdmVyc2lvbiI6MiwiYmQtdGlja2V0LWd1YXJkLWl0ZXJhdGlvbi12ZXJzaW9uIjoxLCJiZC10aWNrZXQtZ3VhcmQtcmVlLXB1YmxpYy1rZXkiOiJCSVRUY2F5b1IvblUyZmFTWWphbTRhWTR3QitrNE0xalhPNkhhTCtLVTFyREQyT0JSVlRSVmZtZnNVUmdTN1pBaXhzSEpUb2ZnY3hLTmJMTy9wVmQ0N1E9IiwiYmQtdGlja2V0LWd1YXJkLXdlYi12ZXJzaW9uIjoyfQ%3D%3D; passport_mfa_token=CjXyIxZUIeR0cFgOyBhlnYCHWvXe8rF2zHwDcSb67M2G12wX%2Bfg4fuXhZLujtsAss%2FxLmo4mqBpKCjwAAAAAAAAAAAAATsJ%2BhQx3PsD%2BDeRcDEKoblVvFgPjzTVlBzCsitfoTx8Tk9PZzK3uC7JxFXH8Xlbv3tUQipDsDRj2sdFsIAIiAQMBIz9o; d_ticket=f32930cb6da460ed67f51890df66ff671cee4; passport_assist_user=Cjzi4BdmWjVaFw2fgXH4Q2lRZdqw1CweDbDyFh0w-e9rOUQW2loIjiZxwc9RxFyi3ANG5a--wgW8eZMelrkaSgo8AAAAAAAAAAAAAE7CoJeN77a2yl6QKyfkHWa-OX6bq85v1QHhDL4H4dVdp0dkSBD3Dzjxm9Uh-oUl48jNEIqQ7A0Yia_WVCABIgEDH93qDg%3D%3D; n_mh=Q3TRjqTKcLq20aEd6hL6QQZ2YXXOKD-DcFlCjs0VPJE; passport_auth_status=a416d525d088943521c27317db68b5dd%2C; passport_auth_status_ss=a416d525d088943521c27317db68b5dd%2C; sid_guard=7f165ab6f8a949f13c5eae488661dddb%7C1742070518%7C5184000%7CWed%2C+14-May-2025+20%3A28%3A38+GMT; uid_tt=a1feb19606f82314ebff1cea261f291d; uid_tt_ss=a1feb19606f82314ebff1cea261f291d; sid_tt=7f165ab6f8a949f13c5eae488661dddb; sessionid=7f165ab6f8a949f13c5eae488661dddb; sessionid_ss=7f165ab6f8a949f13c5eae488661dddb; is_staff_user=false; sid_ucp_v1=1.0.0-KDM2ZDA0MDZmYmMzMDNjMWVlNjkxOTFjYmY5NmUxMmI4NDlkZDA0MDcKHwiV0PPB5QIQ9sXXvgYY7zEgDDDPjtrVBTgCQPEHSAQaAmxmIiA3ZjE2NWFiNmY4YTk0OWYxM2M1ZWFlNDg4NjYxZGRkYg; ssid_ucp_v1=1.0.0-KDM2ZDA0MDZmYmMzMDNjMWVlNjkxOTFjYmY5NmUxMmI4NDlkZDA0MDcKHwiV0PPB5QIQ9sXXvgYY7zEgDDDPjtrVBTgCQPEHSAQaAmxmIiA3ZjE2NWFiNmY4YTk0OWYxM2M1ZWFlNDg4NjYxZGRkYg; store-region=us; store-region-src=uid; login_time=1742070517274; publish_badge_show_info=%220%2C0%2C0%2C1742070518085%22; SelfTabRedDotControl=%5B%5D; _bd_ticket_crypt_doamin=2; _bd_ticket_crypt_cookie=9a42dc9a748568960ba53df9edb43a77; __security_server_data_status=1"
+                # The configuration contains a Cookie header with ttwid and s_v_web_id.
                 cookieData = yamlLoad["TokenManager"]["douyin"]["headers"]["Cookie"]
                 new_line = cookieData
-                # Now we need to update the line with new ttwid, and s_v_web_id
-                # Lets use regex to find the ttwid, and s_v_web_id
+                # Use regex to locate the current ttwid and s_v_web_id values.
                 ttwid_regex = r"ttwid=[^;]+"
                 s_v_web_id_regex = r"s_v_web_id=[^;]+"
-                # Lets find the ttwid, and s_v_web_id
                 ttwid_match = re.search(ttwid_regex, cookieData)
                 s_v_web_id_match = re.search(s_v_web_id_regex, cookieData)
                 if ttwid_match:
@@ -262,13 +414,12 @@ async def docker_restart(client: httpx.AsyncClient, request_url: str, params: di
                     old_s_v_web_id = s_v_web_id_match.group(0)
                     new_s_v_web_id = await fetch_s_v_web_id()
                     new_line = new_line.replace(old_s_v_web_id, f"s_v_web_id={new_s_v_web_id}")
-                # Now we need to update the line in the file
+                # Update the Cookie header in the configuration.
                 yamlLoad["TokenManager"]["douyin"]["headers"]["Cookie"] = new_line
-                # CLose the file
-                # Now we need to write the file back to the container
+                # Write the updated configuration back to the file.
                 with io.open("docker_config/config.yaml", "w", encoding="utf-8") as f:
                     yaml.safe_dump(yamlLoad, f, allow_unicode=True, default_flow_style=False)
-                # Create a tar archive of the file
+                # Create a tar archive of the updated config file.
                 tarPath = shutil.make_archive("docker_config/config", "tar", root_dir="docker_config", base_dir="config.yaml")
                 with open(tarPath, "rb") as f:
                     tar_bytes = f.read()
@@ -277,16 +428,15 @@ async def docker_restart(client: httpx.AsyncClient, request_url: str, params: di
                 filePut = container.put_archive(config_file_path_dir, tar_bytes)
                 if filePut:
                     print("File updated in container.")
-                # Now we need to restart the container
+                # Restart the container and wait until it is running.
                 timestamp2 = int(time.time())
                 container.restart()
                 print("Container restarted.")
-                # wait until the container is ready
                 while True:
                     container.reload()
                     if container.status == "running":
                         print("Container is running.")
-                        #check to see if docker logs say "Application startup complete."
+                        # Check if the container logs indicate that the application has started.
                         if "Application startup complete." in container.logs(since=timestamp2, tail=2).decode("utf-8"):
                             print("Application startup complete.")
                             await asyncio.sleep(3)
@@ -295,17 +445,37 @@ async def docker_restart(client: httpx.AsyncClient, request_url: str, params: di
                 restarts += 1
                 print(f"Restart count: {restarts}")
                 print("Restarting the request...")
-                # Restart the request
+                # After the container has restarted, reattempt the API request.
                 return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restarts)
-    except     de.NotFound:
+    except de.NotFound:
         print(f"Container '{container_name}' not found.")
-    """except Exception as e:
-        print("Error checking Docker logs:", e)"""
+    # Additional exception handling could be added here if desired.
 
 # Updated fetch_video_stream_with_retry with increased timeout and explicit ReadTimeout handling.
-async def fetch_video_stream_with_retry(client: httpx.AsyncClient, request_url: str, params: dict,
-                                        max_retries: int = 10, delay: int = 5, backoff_factor: float = 2.0,
+async def fetch_video_stream_with_retry(client: httpx.AsyncClient,
+                                        request_url: str,
+                                        params: dict,
+                                        max_retries: int = 10,
+                                        delay: int = 5,
+                                        backoff_factor: float = 2.0,
                                         restarts: int = 0) -> bytes:
+    """
+    Download video content as a stream with retry logic and exponential backoff.
+
+    This function attempts to stream a video file from the provided URL. It retries the download if
+    any issues occur (like timeouts or incomplete downloads) and checks Docker logs to determine if a
+    container restart is necessary.
+
+    :param client: An httpx.AsyncClient instance used to perform the HTTP request.
+    :param request_url: The URL of the video download endpoint.
+    :param params: A dictionary of parameters to pass with the request.
+    :param max_retries: The maximum number of retry attempts.
+    :param delay: The initial delay (in seconds) between retry attempts.
+    :param backoff_factor: The multiplier to increase the delay after each failed attempt.
+    :param restarts: The current count of container restarts.
+    :return: The complete video content as bytes.
+    :raises RuntimeWarning: If the maximum number of retries is reached.
+    """
     try:
         sinceTimestamp = int(time.time())
         restart_count = restarts
@@ -314,17 +484,21 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient, request_url: 
             raise RuntimeWarning("Max restarts reached for video stream request")
         try:
             current_delay = delay
+            # Attempt the download for a maximum number of retries.
             for attempt in range(max_retries):
                 try:
                     sinceTimestamp = int(time.time())
+                    # Use the client to stream the video content.
                     async with client.stream("GET", request_url, params=params) as response:
                         if response.status_code == 200:
                             expected = response.headers.get("Content-Length")
                             downloaded = 0
                             chunks = []
+                            # Read the video stream in chunks.
                             async for chunk in response.aiter_bytes(chunk_size=8192):
                                 downloaded += len(chunk)
                                 chunks.append(chunk)
+                            # Verify that the download is complete.
                             if expected and downloaded < int(expected):
                                 raise Exception(f"Incomplete download: {downloaded} bytes (expected {expected})")
                             return b"".join(chunks)
@@ -332,41 +506,35 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient, request_url: 
                             print(f"Attempt {attempt+1}: Received status code {response.status_code}. Retrying in {current_delay} seconds...")
                 except (httpx.ReadTimeout, httpx.RequestError, Exception) as e:
                     print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
-
                 await asyncio.sleep(current_delay)
                 current_delay *= backoff_factor
+                # If critical errors are detected in Docker logs, trigger a container restart.
                 if check_docker_logs_strict():
                     await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             restart_count = 0
             raise RuntimeWarning("Max retries reached for video stream request")
         except RuntimeWarning as e:
-            # noinspection DuplicatedCode
             print(f"Error during video stream request: {e}")
             await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             await asyncio.sleep(600)
-            # delete the client
             try:
                 await client.aclose()
             except Exception as e:
                 print(f"Error closing client: {e}")
-            del client  # delete the client
-            # create a new client
+            del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
             return await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
     except Exception as e:
         print(f"Exception: {e}")
-        print("This should only happen if \"'NoneType' object has no attribute 'status_code'\". \n"
-              "Thus lets wait for 10 minutes, and try again.")
+        print("This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
         responseOut = None
         while responseOut is None:
             await asyncio.sleep(600)
-            # delete the client
             try:
                 await client.aclose()
             except Exception as e:
                 print(f"Error closing client: {e}")
-            del client  # delete the client
-            # create a new client
+            del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
             responseOut = await fetch_video_stream_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
             if responseOut is not None:
@@ -375,8 +543,29 @@ async def fetch_video_stream_with_retry(client: httpx.AsyncClient, request_url: 
                 wn.warn("Response is None, retrying...")
         return responseOut
 
-async def get_with_retry(client: httpx.AsyncClient, request_url: str, params: dict = None,
-                         max_retries: int = 5, delay: int = 5, backoff_factor: float = 2.0, restarts: int = 0) -> httpx.Response:
+async def get_with_retry(client: httpx.AsyncClient,
+                         request_url: str,
+                         params: dict = None,
+                         max_retries: int = 5,
+                         delay: int = 5,
+                         backoff_factor: float = 2.0,
+                         restarts: int = 0) -> httpx.Response:
+    """
+    Send an HTTP GET request with retry logic and exponential backoff.
+
+    If the request fails due to timeouts or non-200 status codes, the function will retry the request.
+    It also checks Docker logs and may trigger a container restart if critical errors are detected.
+
+    :param client: An instance of httpx.AsyncClient used to make the GET request.
+    :param request_url: The URL to send the GET request to.
+    :param params: Optional; a dictionary of query parameters for the request.
+    :param max_retries: Maximum number of retry attempts.
+    :param delay: Initial delay (in seconds) between retry attempts.
+    :param backoff_factor: The factor by which the delay increases after each attempt.
+    :param restarts: The current count of container restarts.
+    :return: An httpx.Response object containing the API response.
+    :raises RuntimeWarning: If the maximum number of retries is reached.
+    """
     try:
         sinceTimestamp = int(time.time())
         restart_count = restarts
@@ -385,6 +574,7 @@ async def get_with_retry(client: httpx.AsyncClient, request_url: str, params: di
             raise RuntimeWarning("Max restarts reached for GET request")
         try:
             current_delay = delay
+            # Attempt the GET request for a maximum number of retries.
             for attempt in range(max_retries):
                 try:
                     sinceTimestamp = int(time.time())
@@ -397,39 +587,32 @@ async def get_with_retry(client: httpx.AsyncClient, request_url: str, params: di
                     print(f"Attempt {attempt+1}: Exception occurred: {e}. Retrying in {current_delay} seconds...")
                 await asyncio.sleep(current_delay)
                 current_delay *= backoff_factor
-                # Lets run the docker restart function
                 if check_docker_logs_strict():
                     await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             restart_count = 0
             raise RuntimeWarning("Max retries reached for GET request")
         except RuntimeWarning as e:
-            # noinspection DuplicatedCode
             print(f"Error during GET request: {e}")
             await docker_restart(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor, restarts=restart_count, since=sinceTimestamp)
             await asyncio.sleep(600)
-            # delete the client
             try:
                 await client.aclose()
             except Exception as e:
                 print(f"Error closing client: {e}")
-            del client  # delete the client
-            # create a new client
+            del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
             return await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
     except Exception as e:
         print(f"Exception: {e}")
-        print("This should only happen if \"'NoneType' object has no attribute 'status_code'\". \n"
-              "Thus lets wait for 10 minutes, and try again.")
+        print("This should only happen if 'NoneType' object has no attribute 'status_code'. \nThus, waiting for 10 minutes before retrying.")
         responseOut = None
         while responseOut is None:
             await asyncio.sleep(600)
-            # delete the client
             try:
                 await client.aclose()
             except Exception as e:
                 print(f"Error closing client: {e}")
-            del client  # delete the client
-            # create a new client
+            del client
             client = httpx.AsyncClient(timeout=httpx.Timeout(9000.0))
             responseOut = await get_with_retry(client, request_url, params, max_retries=max_retries, delay=delay, backoff_factor=backoff_factor)
             if responseOut is not None:
@@ -440,26 +623,62 @@ async def get_with_retry(client: httpx.AsyncClient, request_url: str, params: di
 
 
 class Fetcher:
+    """
+    The Fetcher class orchestrates the process of downloading Douyin videos, extracting metadata,
+    comments, and replies, and then updating the local database accordingly.
 
+    It reads a CSV file that contains hashtags and video URLs, downloads the videos, fetches metadata,
+    retrieves comments and replies via asynchronous API calls, and finally organizes and saves all the
+    collected data for further processing.
+    """
 
     def __init__(self, path: str, output_folder: str = None, api_url: str = None, main_scope: str = None):
+        """
+        Initialize a Fetcher instance with configuration for API endpoints, CSV input, and output directories.
+
+        :param path: The file path to the CSV file containing Douyin video URLs and hashtags.
+        :param output_folder: Optional; the folder where downloaded videos and related files will be saved.
+        :param api_url: Optional; the base URL for the API. Defaults to "http://localhost/api/" if not provided.
+        :param main_scope: Optional; the main API scope. Defaults to "douyin/web/" if not provided.
+        :return: None
+        """
+        # Set default API URL if not provided.
         if api_url is None:
             api_url = "http://localhost/api/"
         self.api_url = api_url
+
+        # Set default main scope if not provided.
         if main_scope is None:
             main_scope = "douyin/web/"
         self.main_scope = main_scope
+
+        # Save the CSV path.
         self.path = path
+
+        # Determine the output folder using the basePather helper function.
         self.output_folder = output_folder
         self.output_folder = basePather(self.output_folder)
-        os.makedirs(self.output_folder, exist_ok=True)
+        os.makedirs(self.output_folder, exist_ok=True)  # Create output folder if it doesn't exist.
+
+        # Initialize the scraper for video processing.
         self.scraper = Scraper()
+
+        # Read the CSV file into a pandas DataFrame, using only the first two columns.
         self.df = pd.read_csv(self.path, usecols=[0, 1])
+        # Rename the columns for clarity.
         self.df.columns = ['hashtags', 'video_url']
+
+        # Initialize the local database from the database module.
         self.db = database.Database()
 
     @staticmethod
     def dataFromResponse(response: requests.Response):
+        """
+        Extract the "data" field from an API response.
+
+        :param response: The HTTP response received from an API call.
+        :return: The JSON-parsed data if the response status is 200; otherwise, None.
+        """
         if response.status_code == 200:
             return response.json()["data"]
         else:
@@ -468,6 +687,12 @@ class Fetcher:
 
     @staticmethod
     def routerFromResponse(response: requests.Response):
+        """
+        Extract the "router" field from an API response.
+
+        :param response: The HTTP response from an API call.
+        :return: The router information if the response status is 200; otherwise, None.
+        """
         if response.status_code == 200:
             return response.json()["router"]
         else:
@@ -475,12 +700,22 @@ class Fetcher:
             return None
 
     def urlFromEndpoint(self, endpoint: str):
+        """
+        Construct the full API URL based on the provided endpoint and the Fetcher's configuration.
+
+        If the endpoint does not start with common API prefixes, it is combined with the main_scope.
+
+        :param endpoint: The API endpoint (e.g., "get_aweme_id").
+        :return: A full URL string for the API request.
+        """
+        # Check if the endpoint already starts with a known prefix.
         if not any((endpoint.startswith("douyin"), endpoint.startswith("/douyin"),
                     endpoint.startswith("api"), endpoint.startswith("/api"),
                     endpoint.startswith("tiktok"), endpoint.startswith("/tiktok"),
                     endpoint.startswith("bilibili"), endpoint.startswith("/bilibili"),
                     endpoint.startswith("hybrid"), endpoint.startswith("/hybrid"),
                     endpoint.startswith("download"), endpoint.startswith("/download"))):
+            # If not, append the main_scope in the appropriate way.
             middle = self.main_scope if not endpoint.startswith("/") else self.main_scope[:-1]
             return self.api_url + middle + endpoint
         if endpoint.startswith("/"):
@@ -488,13 +723,26 @@ class Fetcher:
         return self.api_url + endpoint
 
     async def fetch_aweme_id(self, video_url:str):
+        """
+        Asynchronously fetch the aweme_id for a given video URL.
+
+        :param video_url: The URL of the Douyin video.
+        :return: The aweme_id extracted from the API response.
+        """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "get_aweme_id"
             requestURL = self.urlFromEndpoint(endpoint)
+            # Retry the request until it succeeds.
             response = await get_with_retry(client, requestURL, {"url": video_url})
             return Fetcher.dataFromResponse(response)
 
     async def fetchVideoMetadata(self, aweme_id: str):
+        """
+        Asynchronously fetch the metadata for a video using its aweme_id.
+
+        :param aweme_id: The unique identifier for the video.
+        :return: The video metadata as extracted from the API response.
+        """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "fetch_one_video"
             requestURL = self.urlFromEndpoint(endpoint)
@@ -502,10 +750,18 @@ class Fetcher:
             return Fetcher.dataFromResponse(response)
 
     async def fetchComments(self, aweme_id: str, commentCount: int = -1):
+        """
+        Asynchronously fetch comments for a given video.
+
+        :param aweme_id: The video’s unique identifier.
+        :param commentCount: The number of comments to fetch. If -1, the function will first determine
+                             the comment count from video metadata.
+        :return: A dictionary containing a list of comments.
+        """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "fetch_video_comments"
             requestURL = self.urlFromEndpoint(endpoint)
-            # If commentCount is -1, retrieve the comment count from video metadata.
+            # If commentCount is -1, determine it from video metadata.
             if commentCount == -1:
                 video_data = await self.fetchVideoMetadata(aweme_id)
                 if video_data is None:
@@ -516,14 +772,22 @@ class Fetcher:
                 except KeyError as e:
                     wn.warn(f"Error parsing comment count: {e}. Returning empty comments.")
                     return {"comments": []}
-            # If there are zero comments, return an empty structure without making a request.
+            # If there are no comments, return an empty list.
             if commentCount == 0:
                 return {"comments": []}
             response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id, "count": commentCount})
             return Fetcher.dataFromResponse(response)
 
     async def fetchCommentReplies(self, aweme_id: str, comment_id: str, replyCount: int = -1):
-        # If there are zero replies, return an empty structure immediately.
+        """
+        Asynchronously fetch replies for a specific comment on a video.
+
+        :param aweme_id: The unique identifier for the video.
+        :param comment_id: The unique identifier for the comment.
+        :param replyCount: The number of replies to fetch. If -1, a preliminary request will be made to determine the count.
+        :return: A dictionary containing a list of reply dictionaries.
+        """
+        # If there are no replies, return an empty structure.
         if replyCount == 0:
             return {"comments": []}
 
@@ -531,6 +795,7 @@ class Fetcher:
             endpoint = "fetch_video_comment_replies"
             requestURL = self.urlFromEndpoint(endpoint)
             if replyCount == -1:
+                # Make an initial request to determine the total number of replies.
                 # First, request a small sample to learn the total reply count
                 reply_count_response = await get_with_retry(client, requestURL,
                     params={"item_id": aweme_id, "comment_id": comment_id, "cursor": 0, "count": 20}
@@ -554,6 +819,12 @@ class Fetcher:
             return Fetcher.dataFromResponse(response)
 
     async def fetchVideoFile(self, video_url: str):
+        """
+        Asynchronously download the video file from the provided URL.
+
+        :param video_url: The URL of the video to download.
+        :return: The binary content of the downloaded video.
+        """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "download"
             requestURL = self.urlFromEndpoint(endpoint)
@@ -561,6 +832,12 @@ class Fetcher:
             return response.content
 
     async def fetchUserHandler(self, sec_uid: str):
+        """
+        Asynchronously fetch user profile data using a user's secondary ID (sec_uid).
+
+        :param sec_uid: The secondary user ID.
+        :return: The user data extracted from the API response.
+        """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
             endpoint = "handler_user_profile"
             requestURL = self.urlFromEndpoint(endpoint)
@@ -569,6 +846,12 @@ class Fetcher:
 
     @staticmethod
     def parseVideoMetadata(metadata: dict) -> Dict[str, Any]:
+        """
+        Parse the raw video metadata into a structured dictionary.
+
+        :param metadata: A dictionary containing raw video metadata.
+        :return: A dictionary with key video information (e.g., aweme_id, caption, duration, etc.).
+        """
         aweme_detail = metadata.get("aweme_detail", {})
         aweme_id = aweme_detail.get("aweme_id", "")
         sec_uid = aweme_detail.get("author", {}).get("sec_uid", "")
@@ -587,6 +870,7 @@ class Fetcher:
         share_count = statistics.get("share_count", "")
         text_extra = aweme_detail.get("text_extra", [])
         video_tag = aweme_detail.get("video_tag", [])
+        # Return a structured dictionary with the extracted data.
         return {"aweme_id": aweme_id, "sec_uid": sec_uid, "caption": caption, "create_time": create_time, "desc": desc,
                 "duration": duration, "item_title": item_title, "ocr_content": ocr_content, "admire_count": admire_count,
                 "collect_count": collect_count, "comment_count": comment_count, "digg_count": digg_count,
@@ -594,9 +878,15 @@ class Fetcher:
 
     @staticmethod
     def parseCommentData(comments: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Parse raw comment data into a list of structured comment dictionaries.
+
+        :param comments: A dictionary containing comment data under the key "comments".
+        :return: A list of dictionaries, each representing a comment with key fields.
+        """
         comment_data = []
         commentList: List[Dict[str, Any]] = comments["comments"]
-        # noinspection DuplicatedCode
+        # Iterate through each comment and extract relevant fields.
         for comment in commentList:
             sec_uid = comment.get("user", {}).get("sec_uid", "")
             cid = comment.get("cid", "")
@@ -608,6 +898,7 @@ class Fetcher:
             is_author_digged = comment.get("is_author_digged", "")
             is_hot = comment.get("is_hot", "")
             is_note_comment = comment.get("is_note_comment", "")
+            # Append the structured comment data.
             comment_data.append({"sec_uid": sec_uid, "cid": cid, "text": text, "create_time": create_time,
                                  "digg_count": digg_count, "user_digged": user_digged, "reply_comment_total": reply_comment_total,
                                  "is_author_digged": is_author_digged, "is_hot": is_hot, "is_note_comment": is_note_comment})
@@ -615,11 +906,17 @@ class Fetcher:
 
     @staticmethod
     def parseReplyData(replies: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Parse raw reply data into a list of structured reply dictionaries.
+
+        :param replies: A dictionary containing reply data under the key "comments".
+        :return: A list of dictionaries, each representing a reply.
+        """
         reply_data = []
         replyList: List[Dict[str, Any]] = replies["comments"]
         if replyList is None:
             return []
-        # noinspection DuplicatedCode
+        # Process each reply to extract the key details.
         for reply in replyList:
             sec_uid = reply.get("user", {}).get("sec_uid", "")
             cid = reply.get("cid", "")
@@ -637,6 +934,12 @@ class Fetcher:
 
     @staticmethod
     def parseHandlerData(handler: dict) -> Dict[str, Any]:
+        """
+        Parse raw user handler data into a structured dictionary of user information.
+
+        :param handler: A dictionary containing raw user data.
+        :return: A structured dictionary with user information (personal info, location, statistics, etc.).
+        """
         user = handler.get("user", {})
         account_cert_info = user.get("account_cert_info", "")
         aweme_count = user.get("aweme_count", "")
@@ -693,17 +996,17 @@ class Fetcher:
         Combine video metadata, comments, and replies into a single structured dictionary.
 
         :param url: The URL of the video.
-        :param metadata: A dictionary containing video metadata (expected keys include 'aweme_detail', etc.).
+        :param metadata: A dictionary containing video metadata (e.g., aweme_id, caption, etc.).
         :param comments: A list of dictionaries, each representing a comment.
-        :param replies: A list of lists, where each inner list contains dictionaries for replies corresponding to a comment.
-        :param index: An integer used to generate file paths.
-        :return: A dictionary with the combined video data.
+        :param replies: A list of lists where each inner list contains dictionaries representing replies for a comment.
+        :param index: An integer used to generate file paths for saving the video and transcripts.
+        :return: A dictionary containing the combined video data.
+        :raises ValueError: If the index is not provided or if the length of comments and replies do not match.
         """
-
         if index is None:
             raise ValueError("An index value is required to form file paths.")
 
-        # Define file paths based on the index value
+        # Generate file paths for the video and various transcript formats using the index.
         vidPath = f"Videos\\{index}.mp4"
         jsonPath = f"Transcriptions\\json\\{index}.json"
         srtPath = f"Transcriptions\\srt\\{index}.srt"
@@ -711,15 +1014,18 @@ class Fetcher:
         txtPath = f"Transcriptions\\txt\\{index}.txt"
         vttPath = f"Transcriptions\\vtt\\{index}.vtt"
 
-        # Process comments and their replies
+        # Initialize an empty list to hold structured comment data.
         comment_list = []
+        # Ensure that the number of comments matches the number of reply lists.
         if len(comments) != len(replies):
             raise ValueError("The length of comments and replies must match.")
 
+        # Process each comment and its corresponding replies.
         for i, comment in enumerate(comments):
             reply_list = replies[i]
             reply_dict_list = []
             for reply in reply_list:
+                # Structure the reply data.
                 reply_dict = {
                     "sec_uid": reply["sec_uid"],
                     "reply_data": {
@@ -745,6 +1051,7 @@ class Fetcher:
                 }
                 reply_dict_list.append(reply_dict)
 
+            # Structure the comment data, including its replies.
             commment_dict = {
                 "sec_uid": comment["sec_uid"],
                 "comment_data": {
@@ -772,6 +1079,7 @@ class Fetcher:
             }
             comment_list.append(commment_dict)
 
+        # Assemble the complete video data object.
         vidDataObj = {
             "file_folder": {
                 "video_file": vidPath,
@@ -821,11 +1129,11 @@ class Fetcher:
         """
         Combine user metadata, video data, and comment data into a single structured dictionary.
 
-        :param sec_id: A string representing the user's sec_uid.
-        :param handler: A dictionary containing user metadata (expected keys include 'user', etc.).
+        :param sec_id: A string representing the user's secondary ID (sec_uid).
+        :param handler: A dictionary containing user profile data.
         :param videoList: A list of dictionaries, each representing a video.
         :param commentList: A list of dictionaries, each representing a comment.
-        :return: A dictionary with the combined user data.
+        :return: A dictionary combining all user-related data.
         """
         userDataObj = {
             "sec_uid": sec_id,
@@ -874,15 +1182,19 @@ class Fetcher:
 
     async def newDownload(self, video_url: str, index: int, path_to: str = None, path_strict: bool = False) -> str:
         """
-        Download the video, ensuring the file is fully saved before finishing.
-        Checks Docker logs for errors to ensure the download was successful.
+        Download the video from the provided URL and save it to a file.
 
-        :param video_url: URL of the video to download.
-        :param index: An integer used to generate a filename.
-        :param path_to: Directory to save the video file.
-        :param path_strict: if true dont pass through basePather and make sure to save to path directly
-        :return: The full file path of the saved video.
+        This method ensures the video is completely saved and also checks Docker logs for any errors
+        during the download process. If errors are detected, it retries the download.
+
+        :param video_url: The URL of the video to download.
+        :param index: An integer used to generate a unique filename.
+        :param path_to: Optional; the directory to save the video file.
+        :param path_strict: If True, bypasses basePather and saves directly to the provided path.
+        :return: The full file path where the video is saved.
+        :raises RuntimeError: If errors are detected in Docker logs during download.
         """
+        # Determine the appropriate output directory based on the path_strict flag.
         if not path_strict:
             if path_to is None:
                 path_to = basePather(None)
@@ -895,66 +1207,106 @@ class Fetcher:
                 path_to = downloadVideoPath(index, path_to)
         os.makedirs(path_to, exist_ok=True)
 
-        # Record the current timestamp for Docker log filtering.
+        # Record current time to filter Docker logs later.
         sinceTimestamp = int(time.time())
 
-        # Increase the timeout for large video downloads.
-        timeout = httpx.Timeout(9000.0)  # 300 seconds
+        # Set a high timeout value for potentially large video downloads.
+        timeout = httpx.Timeout(9000.0)  # Approximately 9000 seconds.
         async with httpx.AsyncClient(timeout=timeout) as client:
             endpoint = "download"
             request_url = self.urlFromEndpoint(endpoint)
             params = {"url": video_url, "prefix": False, "with_watermark": False}
             video_content = await fetch_video_stream_with_retry(client, request_url, params)
+        # Determine file path based on path_strict.
         if path_strict:
             file_path = path_to
             os.makedirs(path_to, exist_ok=True)
         else:
             file_path = os.path.join(path_to, f"{index}.mp4")
+        # Save the video content asynchronously.
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(video_content)
 
-        # Wait until the file exists and has nonzero size
+        # Wait a short period to ensure the file is completely written.
         for _ in range(10):
             if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
                 break
             await asyncio.sleep(0.5)
 
-        # Check Docker logs for errors using the helper function.
-        container_name = "douyin_tiktok_api"  # Update to your container's name
+        # Check Docker logs for errors during the download.
+        container_name = "douyin_tiktok_api"  # Update with your container name if necessary.
         try:
             if check_docker_logs(container_name, since=sinceTimestamp):
                 raise RuntimeError(f"Errors detected in Docker logs for video {video_url}")
         except RuntimeError as e:
             print(f"Error checking Docker logs: {e}")
-            # Optionally, you can retry the download.
+            # If an error occurs, retry the download.
             return await self.newDownload(video_url, index, path_to)
 
         print(f"Downloaded video successfully: {video_url}")
         return file_path
 
     async def composeUserData(self, user_set: set, user_video_dict: Dict[str, Any], user_comment_dict: Dict[str, Any]):
+        """
+        Compose and insert user data into the local database by combining fetched video and comment data.
+
+        :param user_set: A set of unique user sec_uid values.
+        :param user_video_dict: A dictionary mapping user sec_uid to a list of video data.
+        :param user_comment_dict: A dictionary mapping user sec_uid to a list of comment data.
+        :return: None
+        """
         for sec_uid in user_set:
+            # Fetch and parse user handler data for the given user.
             handler = Fetcher.parseHandlerData(await self.fetchUserHandler(sec_uid))
             videoList = user_video_dict[sec_uid]
             commentList = user_comment_dict[sec_uid]
+            # Combine all user-related data into one dictionary.
             userData = Fetcher.userDictFormer(sec_uid, handler, videoList, commentList)
             self.db.new_user(userData)
 
     def userDataUpdater(self, user_set: set, user_video_dict: Dict[str, Any], user_comment_dict: Dict[str, Any]):
+        """
+        Update existing user records in the database with new video and comment data.
+
+        :param user_set: A set of user sec_uid values to update.
+        :param user_video_dict: A dictionary mapping user sec_uid to video data.
+        :param user_comment_dict: A dictionary mapping user sec_uid to comment data.
+        :return: None
+        """
         for sec_uid in user_set:
-            # update the userVideoDict and userCommentDict
+            # For each video linked to the user, update the user's video list in the database.
             for video in user_video_dict[sec_uid]:
                 aweme_id = video["aweme_id"]
-                # Check if the video already exists in the database
-                # ahaha not done yet
-                self.db.update_user_videos(sec_uid, aweme_id)
+                # Check if the video exists in the database using database methods.
+                user_videos = self.db.search_users(["sec_uid"], [sec_uid])[0].get("videos", [])
+                if user_videos is not None:
+                    if len(user_videos) > 0:
+                        for user_video in user_videos:
+                            if user_video["aweme_id"] == aweme_id:
+                                break
+                        else:
+                            self.db.update_user_videos(sec_uid, aweme_id)
+                    else:
+                        self.db.update_user_videos(sec_uid, aweme_id)
+                else:
+                    raise ValueError(f"User {sec_uid} not found in database.")
+            # Similarly, update the user's comment list.
             for comment in user_comment_dict[sec_uid]:
                 aweme_id = comment["aweme_id"]
                 comment_id = comment["comment_id"]
-                # Check if the comment already exists in the database
-                # ahaha not done yet
-                self.db.update_user_comments(sec_uid, aweme_id, comment_id)
-
+                # Check if the comment exists in the database using database methods.
+                user_comments = self.db.search_users(["sec_uid"], [sec_uid])[0].get("comments", [])
+                if user_comments is not None:
+                    if len(user_comments) > 0:
+                        for user_comment in user_comments:
+                            if user_comment["aweme_id"] == aweme_id and user_comment["comment_id"] == comment_id:
+                                break
+                        else:
+                            self.db.update_user_comments(sec_uid, aweme_id, comment_id)
+                    else:
+                        self.db.update_user_comments(sec_uid, aweme_id, comment_id)
+                else:
+                    raise ValueError(f"User {sec_uid} not found in database.")
             
     async def downloader(self, video_url: str, index: int, output_folder: str = None):
         """
