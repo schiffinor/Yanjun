@@ -777,13 +777,14 @@ class Fetcher:
             response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id})
             return Fetcher.dataFromResponse(response)
 
-    async def fetchComments(self, aweme_id: str, commentCount: int = -1):
+    async def fetchComments(self, aweme_id: str, commentCount: int = -1, cursor: int = 0):
         """
         Asynchronously fetch comments for a given video.
 
         :param aweme_id: The video’s unique identifier.
         :param commentCount: The number of comments to fetch. If -1, the function will first determine
                              the comment count from video metadata.
+        :param cursor: The pagination cursor for fetching comments.
         :return: A dictionary containing a list of comments.
         """
         async with httpx.AsyncClient(timeout=httpx.Timeout(9000.0)) as client:
@@ -795,7 +796,7 @@ class Fetcher:
             # If there are no comments, return an empty list.
             if commentCount == 0:
                 return {"comments": []}
-            response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id, "count": commentCount})
+            response = await get_with_retry(client, requestURL, {"aweme_id": aweme_id, "count": commentCount, "cursor": cursor})
             return Fetcher.dataFromResponse(response)
 
     async def fetchCommentReplies(self, aweme_id: str, comment_id: str, replyCount: int = -1):
@@ -1290,6 +1291,7 @@ class Fetcher:
             # Combine all user-related data into one dictionary.
             userData = Fetcher.userDictFormer(sec_uid, handler, videoList, commentList)
             self.db.new_user(userData)
+        return True
 
     def userDataUpdater(self, user_set: set, user_video_dict: Dict[str, Any], user_comment_dict: Dict[str, Any]):
         """
@@ -1311,7 +1313,9 @@ class Fetcher:
             for video in user_video_dict[sec_uid]:
                 aweme_id = video["aweme_id"]
                 # Retrieve the user's current video list from the database.
-                user_videos = self.db.search_users(["sec_uid"], [sec_uid])[0].get("videos", [])
+                user_videos = self.db.search_users(["sec_uid"], [sec_uid])
+                print(user_videos)
+                user_videos = user_videos[0].get("videos", [])
                 # If user videos are found, check if the current video already exists.
                 if user_videos is not None:
                     if len(user_videos) > 0:
@@ -1435,6 +1439,7 @@ class Fetcher:
             """
             if sec_uid not in userSet:
                 userSet.add(sec_uid)
+                newUserSet.add(sec_uid)
                 userVideoDict[sec_uid] = []
                 userCommentDict[sec_uid] = []
             else:
@@ -1466,12 +1471,26 @@ class Fetcher:
             author_sec_uid = metadata["sec_uid"]
             # Add the video author to the user data structures.
             userAdding(author_sec_uid, True, aweme_id)
-            comment_count = metadata["comment_count"]
             # I found that Douyin API limits the comment count to 50, so we set a cap.
-            if comment_count > 50:
-                comment_count = 50
+            raw_comments: Dict[str, Any] = await self.fetchComments(aweme_id, 50)
+            comment_count = raw_comments["total"]
+            if comment_count > 200:
+                comment_count = 200
+            comments = Fetcher.parseCommentData(raw_comments)
             # Fetch and parse the video comments.
-            comments = Fetcher.parseCommentData(await self.fetchComments(aweme_id, comment_count))
+            cursor = 50
+            while len(comments) < comment_count:
+                # Determine the number of comments to fetch based on the current count.
+                if comment_count - len(comments) > 50:
+                    c_count = 50
+                else:
+                    c_count = comment_count - len(comments)
+                # If the number of comments is less than expected, fetch more.
+                raw_comments = await self.fetchComments(aweme_id, c_count, cursor)
+                if raw_comments["comments"] is None:
+                    break
+                comments.extend(Fetcher.parseCommentData(raw_comments))
+                cursor += c_count
             replyList = []
             # Process each comment.
             for comment in comments:
@@ -1499,9 +1518,10 @@ class Fetcher:
             pd.to_pickle(userCommentDict, tempUserCommentDictPickPath)
 
         # Insert new user data into the database.
-        await self.composeUserData(newUserSet, userVideoDict, userCommentDict)
+        completed = await self.composeUserData(newUserSet, userVideoDict, userCommentDict)
         # Update existing user data in the database.
-        self.userDataUpdater(usersToUpdate, userVideoDict, userCommentDict)
+        if len(usersToUpdate) > 0 and completed:
+            self.userDataUpdater(usersToUpdate, userVideoDict, userCommentDict)
 
     # Example usage in an async main (for testing purposes):
 
@@ -1542,4 +1562,4 @@ if __name__ == '__main__':
     # asyncio.run(quickDownloadFromCSV())
 
     fetcher = Fetcher("videos_trim_1.csv", "output_folder")
-    asyncio.run(fetcher.fetch(dl=False, collect_replies=False, collect_commenter_data=False))
+    asyncio.run(fetcher.fetch(dl=False, collect_replies=False, collect_commenter_data=False), debug=True)

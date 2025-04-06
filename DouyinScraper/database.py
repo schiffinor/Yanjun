@@ -1282,8 +1282,18 @@ class Database:
         :param complex_logic: Optional complex logic string for combining conditions.
         :return: A list of records matching the constructed query.
         """
-        query = self.video_query_constructor(queryObj, variables, values, and_or, operatorCode, cast_data,
+        if data_to_query is self.video_table:
+            # Construct a query for video records.
+            q_con = Database.video_query_constructor
+        elif data_to_query is self.user_table:
+            # Construct a query for user records.
+            q_con = Database.user_query_constructor
+        else:
+            raise ValueError("data_to_query must be either video_table or user_table.")
+
+        query = q_con(queryObj, variables, values, and_or, operatorCode, cast_data,
                                              complex_logic)
+        print(f"Query: {query}")
         return data_to_query.search(query)
 
     def search_videos(self,
@@ -1766,6 +1776,9 @@ if __name__ == "__main__":
                                  f"comment_length: {min([len(comment["comment_data"]["content"]) for comment in video["comments"]])}"]
                                 for video in videos]
     print(f"Videos: {video_ids_and_check_data}")
+    # test search_users
+    users = dab.search_users(["sec_uid"], ["MS4wLjABAAAARglgZSh09oRWurRs2re9pNY3qXmE_UzqLS50-bl0ZSQ"], AO.AND, ["=="], cast_data=False)
+    print(f"Users: {users}")
 
     # test get_data_keys
     keys = get_data_keys(dab.video_table)
@@ -1774,7 +1787,7 @@ if __name__ == "__main__":
     key_types = dab.get_data_key_type_dict("Videos")
     print(f"Video Table Key Types: {key_types}")
 
-    """# test data_to_csv save to different folder
+    # test data_to_csv save to different folder
     dab.data_to_csv("Videos", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")
     dab.data_to_csv("Users", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")
-    dab.data_to_csv("comments", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")"""
+    dab.data_to_csv("comments", to_excel=True, basePath="C:/Users/schif/Documents/Coding/Yanjun/Database/slop")

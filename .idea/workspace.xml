@@ -10,6 +10,7 @@
     <list default="true" id="1d4a0956-3a28-4c50-940b-7271386cec0b" name="Changes" comment="cleanup">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/FileFetcher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DouyinScraper/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/DouyinScraper/database.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -177,7 +178,7 @@
       <workItem from="1743027300291" duration="1037000" />
       <workItem from="1743029183536" duration="46882000" />
       <workItem from="1743464150723" duration="33251000" />
-      <workItem from="1743581779362" duration="38699000" />
+      <workItem from="1743581779362" duration="45851000" />
     </task>
     <task id="LOCAL-00001" summary="1th step">
       <option name="closed" value="true" />
@@ -275,7 +276,15 @@
       <option name="project" value="LOCAL" />
       <updated>1743656422349</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="cleanup">
+      <option name="closed" value="true" />
+      <created>1743658806329</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1743658806329</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -311,17 +320,17 @@
     <SUITE FILE_PATH="coverage/Yanjun$CommentTree.coverage" NAME="CommentTree Coverage Results" MODIFIED="1742859653220" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$quickopfetch.coverage" NAME="quickopfetch Coverage Results" MODIFIED="1743570281686" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$dbtest.coverage" NAME="dbtest Coverage Results" MODIFIED="1743207642371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1743650124249" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$database.coverage" NAME="database Coverage Results" MODIFIED="1743665871716" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$testSound.coverage" NAME="testSound Coverage Results" MODIFIED="1742077862104" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$DouScrape.coverage" NAME="DouScrape Coverage Results" MODIFIED="1742254434337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$scraperTest.coverage" NAME="scraperTest Coverage Results" MODIFIED="1742874996771" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$Operands.coverage" NAME="Operands Coverage Results" MODIFIED="1741214551376" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Yanjun$dataFixer.coverage" NAME="dataFixer Coverage Results" MODIFIED="1743205582401" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$composeUserDataFromPickle.coverage" NAME="composeUserDataFromPickle Coverage Results" MODIFIED="1743561085061" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$FileFetcher.coverage" NAME="FileFetcher Coverage Results" MODIFIED="1743570870309" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$FileFetcher.coverage" NAME="FileFetcher Coverage Results" MODIFIED="1743664324671" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$cookieGetter.coverage" NAME="cookieGetter Coverage Results" MODIFIED="1742073130993" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Douyin Scraper" />
     <SUITE FILE_PATH="coverage/Yanjun$inverseDataFixer.coverage" NAME="inverseDataFixer Coverage Results" MODIFIED="1743208093355" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
     <SUITE FILE_PATH="coverage/Yanjun$userDataFixer.coverage" NAME="userDataFixer Coverage Results" MODIFIED="1743194870150" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DouyinScraper" />
-    <SUITE FILE_PATH="coverage/Yanjun$cookieParse.coverage" NAME="cookieParse Coverage Results" MODIFIED="1742877095566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="C:\Users\schif\Documents\Coding\Yanjun\DouyinScraper" />
+    <SUITE FILE_PATH="coverage/Yanjun$cookieParse.coverage" NAME="cookieParse Coverage Results" MODIFIED="1743663010168" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="C:\Users\schif\Documents\Coding\Yanjun\DouyinScraper" />
   </component>
 </project>
